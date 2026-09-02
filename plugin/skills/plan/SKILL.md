@@ -35,6 +35,13 @@ the change from the plan alone.
 
 ## Write the file
 
+Plan mode cannot write files, and that is the point: nothing is written until
+the engineer accepts. So the order is: draft the plan in plan mode, present it
+for acceptance, and once plan mode exits make writing and committing
+`intent/<slug>/plan.md` the first action, before any implementation. In a
+non-interactive session there is no acceptance step; write the file directly
+and say at the top of the plan that it was produced without review.
+
 Path: `intent/<slug>/plan.md`. Use `references/plan-template.md`. The four
 core sections are the article's: **Files that change**, **Order of work**,
 **Risks**, **Proof**. Proof must be quantifiable so the session can verify
