@@ -61,6 +61,12 @@ tech lead chose. Do not create example artifacts.
 
 ## Step 3: Plugin and hooks
 
+Claude Code guards writes under `.claude/`, so a non-interactive session may
+not be allowed to change `settings.json` or add hooks. If a write there is
+refused, do not stop: write the whole step as `adopt-step3-hooks.patch` at
+the repo root, check it with `git apply --check`, and tell the user to run
+`git apply adopt-step3-hooks.patch && rm adopt-step3-hooks.patch`.
+
 Add or merge `.claude/settings.json` so it enables `ai-native-sdlc@jsnkle`
 (`enabledPlugins`) and registers the marketplace
 (`extraKnownMarketplaces`). Copy `.claude/hooks/production-gate.sh` and
