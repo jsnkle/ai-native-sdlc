@@ -8,10 +8,15 @@ Electric style rule set. Prints a JSON report and exits with the tier (0 to 3) s
 shell script can branch on it.
 
 usage: detect.py [--bands ops/bands.yaml] [--source gh|FILE] [--repo OWNER/NAME] [--quiet]
+
+Runs on draft pull requests are excluded when bands.yaml sets ignore_draft_prs, and runs on
+branches matching ignore_branches globs are always excluded. A file source may carry
+"draft": true on a run directly.
 """
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import math
 import subprocess
@@ -31,6 +36,8 @@ def load_bands(path: Path) -> dict:
         if key not in bands:
             raise SystemExit(f"bands file is missing '{key}'")
     bands.setdefault("min_baseline_rate", 0.05)
+    bands.setdefault("ignore_draft_prs", False)
+    bands.setdefault("ignore_branches", [])
     return bands
 
 
@@ -46,6 +53,30 @@ def fetch_runs_gh(workflow: str, limit: int, repo: str | None) -> list[dict]:
 def load_runs_file(path: Path) -> list[dict]:
     with path.open() as fh:
         return json.load(fh)
+
+
+def fetch_draft_branches_gh(repo: str | None) -> set[str]:
+    """Head branches of pull requests that are currently drafts (open or closed)."""
+    cmd = ["gh", "pr", "list", "--state", "all", "--limit", "200", "--json", "headRefName,isDraft"]
+    if repo:
+        cmd += ["--repo", repo]
+    out = subprocess.run(cmd, check=True, capture_output=True, text=True).stdout
+    return {pr["headRefName"] for pr in json.loads(out) if pr.get("isDraft")}
+
+
+def mark_drafts(runs: list[dict], draft_branches: set[str]) -> list[dict]:
+    """Set run["draft"] for pull_request runs whose head branch backs a draft PR."""
+    for r in runs:
+        if r.get("event") == "pull_request" and r.get("headBranch") in draft_branches:
+            r["draft"] = True
+    return runs
+
+
+def is_ignored(run: dict, bands: dict) -> bool:
+    if bands.get("ignore_draft_prs") and run.get("draft"):
+        return True
+    branch = run.get("headBranch") or ""
+    return any(fnmatch.fnmatch(branch, pat) for pat in bands.get("ignore_branches", []))
 
 
 def completed_newest_first(runs: list[dict]) -> list[dict]:
@@ -98,7 +129,8 @@ def detect(bands: dict, runs: list[dict]) -> dict:
     k = int(bands["window"])
     n = int(bands["baseline"])
     floor = float(bands["min_baseline_rate"])
-    runs = completed_newest_first(runs)
+    ignored = [r for r in runs if is_ignored(r, bands)]
+    runs = completed_newest_first([r for r in runs if not is_ignored(r, bands)])
     series = [1 if r["conclusion"] == "failure" else 0 for r in runs]
 
     zs: list[float] = []
@@ -119,6 +151,7 @@ def detect(bands: dict, runs: list[dict]) -> dict:
         "metric": bands["metric"],
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "runs_considered": len(runs),
+        "runs_ignored": len(ignored),
         "window": k,
         "failures_in_window": latest[2] if latest else sum(series[:k]),
         "baseline_rate": round(latest[1], 4) if latest else None,
@@ -150,6 +183,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.source == "gh":
         src = bands.get("source", {})
         runs = fetch_runs_gh(src.get("workflow", "ci"), int(src.get("limit", 200)), args.repo)
+        if bands.get("ignore_draft_prs"):
+            runs = mark_drafts(runs, fetch_draft_branches_gh(args.repo))
     else:
         runs = load_runs_file(Path(args.source))
 

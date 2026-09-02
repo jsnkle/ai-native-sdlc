@@ -95,3 +95,28 @@ def test_missing_band_keys_fail_loudly(tmp_path, key):
     p.write_text("\n".join(f"{k}: {json.dumps(v)}" for k, v in cfg.items()) + "\n")
     with pytest.raises(SystemExit):
         detect.load_bands(p)
+
+
+def test_draft_pr_runs_are_excluded_when_configured():
+    runs = runs_from("FFFF." + "." * 30)
+    for r in runs[:4]:
+        r["event"] = "pull_request"; r["headBranch"] = "wip/thing"; r["draft"] = True
+    on = dict(BANDS, ignore_draft_prs=True)
+    assert detect.detect(on, runs)["tier"] == 0
+    assert detect.detect(on, runs)["runs_ignored"] == 4
+    assert detect.detect(BANDS, runs)["tier"] == 3  # default: drafts count
+
+
+def test_ignored_branch_globs_always_apply():
+    runs = runs_from("FF..." + "." * 30)
+    for r in runs[:2]:
+        r["headBranch"] = "spike/try-things"
+    assert detect.detect(dict(BANDS, ignore_branches=["spike/*"]), runs)["tier"] == 0
+
+
+def test_mark_drafts_only_touches_pull_request_runs():
+    runs = runs_from("FF")
+    runs[0]["event"] = "pull_request"; runs[0]["headBranch"] = "wip/x"
+    runs[1]["event"] = "push"; runs[1]["headBranch"] = "wip/x"
+    detect.mark_drafts(runs, {"wip/x"})
+    assert runs[0].get("draft") is True and "draft" not in runs[1]

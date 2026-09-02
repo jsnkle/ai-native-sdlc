@@ -16,7 +16,10 @@ The metric is the CI test failure rate. The statistic is the number of failures 
 recent `window` completed runs, compared with the failure rate of the `baseline` runs before
 them. The baseline rate is floored at `min_baseline_rate` so a clean history is not
 zero-variance, otherwise a single failure after a perfect month would read as infinite sigma.
-Cancelled, skipped and in-progress runs are not evidence.
+Cancelled, skipped and in-progress runs are not evidence. With `ignore_draft_prs: true` neither are
+runs on draft pull requests, since a draft is where a red test legitimately lives; `ignore_branches`
+excludes branch globs outright. Both were added after the first proposal the loop opened turned out
+to be a work-in-progress branch, which is how a dismissal is meant to tune the bands.
 
 `rules: western_electric` maps the sliding-window z-scores to tiers:
 

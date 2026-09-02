@@ -9,6 +9,8 @@ source:
 window: 5                 # the statistic is failures in the most recent N completed runs
 baseline: 30              # runs before the window used to estimate the normal failure rate
 min_baseline_rate: 0.05   # floor for the baseline rate so a clean history is not zero-variance
+ignore_draft_prs: true    # runs on draft PRs are where red tests legitimately live; not evidence
+ignore_branches: []       # globs, e.g. ["wip/*", "spike/*"]; always excluded
 rules: western_electric   # z-score bands on the sliding window; see ops/README.md for the mapping
 tiers:
   1sigma: { action: log }
