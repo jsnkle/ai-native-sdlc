@@ -1,11 +1,18 @@
-# Closing the loop (Stage 6: Maintain). A deterministic script watches one metric and invokes Claude
-# only when a control band is breached. The tier decides what Claude may do. No model in the detection path.
+# Closing the loop (Stage 6: Maintain).
+# A deterministic script (ops/detect.py) watches one metric and invokes Claude only when a
+# control band is breached. The tier decides what Claude may do. No model in the detection path.
+
 metric: ci_test_failure_rate
-baseline: rolling_30d
-rules: western_electric
+source:
+  workflow: ci            # GitHub Actions workflow name, read with `gh run list`
+  limit: 200              # most recent runs considered
+window: 5                 # the statistic is failures in the most recent N completed runs
+baseline: 30              # runs before the window used to estimate the normal failure rate
+min_baseline_rate: 0.05   # floor for the baseline rate so a clean history is not zero-variance
+rules: western_electric   # z-score bands on the sliding window; see ops/README.md for the mapping
 tiers:
   1sigma: { action: log }
   2sigma: { action: diagnose,
-            tools: "Read,Grep,Bash(gh run view *)" }
+            tools: "Read,Grep,Glob,Bash(gh run view *),Bash(gh run list *),Bash(gh pr view *),Bash(git log *),Bash(git show *)" }
   3sigma: { action: propose,
-            routes: [pull_request, runbook:rollback-deploy] }
+            routes: [pull_request] }
