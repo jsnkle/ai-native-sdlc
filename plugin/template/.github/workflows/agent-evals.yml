@@ -1,29 +1,34 @@
 # Continuous evals (Stage 4: Test). Runs whenever the configuration that steers the agent changes, and nightly.
-# Needs ANTHROPIC_API_KEY in repository secrets with budget for eval runs.
+# Needs ANTHROPIC_API_KEY in repository secrets with budget for eval runs. The plugin is installed because
+# its hooks (protect tests during a fix, no secrets in the diff) are part of what the suite tests.
 name: Agent evals
 on:
   pull_request:
     paths: ['CLAUDE.md', 'REVIEW.md', '.claude/**', 'evals/**']
   schedule:
     - cron: '0 2 * * *'
+  workflow_dispatch:
 jobs:
   evals:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m venv .venv && .venv/bin/pip install -q -r requirements-dev.txt
       - run: npm install -g @anthropic-ai/claude-code
+      - run: |
+          claude plugin marketplace add jsnkle/ai-native-sdlc
+          claude plugin install ai-native-sdlc@jsnkle --scope user
       - name: Run eval suite
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          set -e
-          fail=0
-          for eval in evals/*.json; do
-            echo "== $eval"
-            claude -p "$(jq -r '.prompt' "$eval")" \
-              --allowedTools "$(jq -r '.allowedTools // "Read,Edit,Bash(make test)"' "$eval")" \
-              --output-format json > result.json || true
-            ./evals/check.sh "$eval" result.json || fail=1
-            git checkout -- . && git clean -fdq
-          done
-          exit $fail
+        run: evals/run.sh
+      - name: Keep agent transcripts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: evals/.result-*.json
+          if-no-files-found: ignore

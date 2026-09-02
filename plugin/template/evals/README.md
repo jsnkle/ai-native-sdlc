@@ -11,6 +11,7 @@ Collect 20 to 50 real tasks from recent work with their accepted outcome. For ea
   "name": "add-endpoint",
   "prompt": "the task as an engineer would phrase it",
   "allowedTools": "Read,Edit,Bash(make test)",
+  "setup": ["touch .claude/fix-task"],
   "checks": {
     "commands": ["make test", "make lint"],
     "files_changed_match": ["src/api/"],
@@ -21,6 +22,7 @@ Collect 20 to 50 real tasks from recent work with their accepted outcome. For ea
 }
 ```
 
+- `setup`: shell commands run before the agent, to stage the situation (a marker file, an injected bug).
 - `commands`: each must exit 0 after the agent has run.
 - `files_changed_match`: at least one changed file must match each prefix.
 - `files_unchanged`: no changed file may start with these prefixes.
@@ -32,9 +34,13 @@ Every production incident gets an eval, written by the team that owned it, and s
 
 A configuration change that drops the pass rate gets reviewed before it merges. The workflow exits non-zero on any failing eval; tighten to a percentage threshold once the suite is large.
 
-## Running one locally
+## Running locally
 
 ```sh
-claude -p "$(jq -r .prompt evals/example-add-endpoint.json)" --allowedTools "Read,Edit,Bash(make test)" --output-format json > result.json
-./evals/check.sh evals/example-add-endpoint.json result.json
+evals/run.sh                          # the whole suite, under your Claude Code login
+evals/run.sh evals/one-case.json      # a subset
 ```
+
+`run.sh` needs a clean working tree, runs each case's optional `setup` commands first, then the agent, then `check.sh`, and resets the tree between cases. The workflow calls the same script, so local and CI runs are identical apart from the credential.
+
+Expect the first run of a new case to find a bug in the case rather than in the agent: a fix that restores a file byte-for-byte shows no diff, so assert content rather than `files_changed_match`; and forbidding changes under `intent/` contradicts a CLAUDE.md that says every change starts there.
