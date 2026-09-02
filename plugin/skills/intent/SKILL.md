@@ -29,6 +29,11 @@ the originator said:
 5. **Success.** How would they know it worked?
 6. **Open questions.** What could they not answer? Record it rather than guess.
 
+If the session cannot take answers (a non-interactive `claude -p` run), say so,
+write the draft with every guess marked as an assumption, and end with the
+numbered questions you would have asked. The originator answers on resume and
+you fold the answers in and re-commit.
+
 If the intent arrives from an incident, ticket or monitoring breach instead of
 a person, fill the same sections from the evidence and mark `Status: draft`
 with the source in the header. The product owner corrects it before commit.
