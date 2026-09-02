@@ -42,6 +42,8 @@ ops/loop.sh                      # once, against this repo's CI history
 ```
 
 Locally it runs under your Claude Code login. Unattended it runs from a scheduled workflow
-with `ANTHROPIC_API_KEY` in repository secrets. Triage the PRs it opens: fix now, schedule,
+with `ANTHROPIC_API_KEY` in repository secrets (a Console API key, which is billed separately from
+a Claude subscription) and the repository setting that allows GitHub Actions to create pull
+requests. Without that setting the propose step pushes its branch and then fails to open the PR. Triage the PRs it opens: fix now, schedule,
 or dismiss. A dismissal should tune `bands.yaml`, and a fix should add an eval for the
 incident so the configuration is regression-tested against it.

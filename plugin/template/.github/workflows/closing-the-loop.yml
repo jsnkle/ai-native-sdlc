@@ -3,7 +3,11 @@
 # with the tools ops/bands.yaml allows for that tier. Anything it proposes arrives as a PR through
 # branch protection; the workflow has no route to main.
 #
-# Needs: ANTHROPIC_API_KEY in repository secrets, and a venv-based Makefile like the template's.
+# Needs: ANTHROPIC_API_KEY in repository secrets (a Console key, sk-ant-api03-..., from a workspace
+# with credits), a venv-based Makefile like the template's, and the repository setting
+# Settings > Actions > General > Workflow permissions > "Allow GitHub Actions to create and approve
+# pull requests", or the propose step pushes its branch and then fails at gh pr create with
+# "GitHub Actions is not permitted to create or approve pull requests".
 # The default GITHUB_TOKEN can open the PR but cannot trigger CI on it; use a fine-grained PAT as
 # LOOP_GH_TOKEN if the proposal PRs must run checks automatically.
 name: closing-the-loop
