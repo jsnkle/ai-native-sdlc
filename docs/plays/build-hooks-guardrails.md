@@ -38,6 +38,8 @@ Two generic hooks ship in the plugin at `plugin/hooks/`: one that blocks edits t
     "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/protected-paths.sh" } ] } ] } }
 ```
 
+**Two things the sandbox taught about writing hooks.** Read the payload with `input=$(cat)` and pipe it to `jq`, not `jq < /dev/stdin`: on a Linux runner the latter can see no input, so the hook exits 0 and silently allows the action, while every test on a Mac passes. And hooks in a project's `.claude/settings.json` only run once the workspace is trusted; on a CI runner nothing has accepted the trust dialog, so either write the trust entry to `~/.claude.json` in the workflow or install the hooks at user level, where they always run. Plugin hooks run regardless of trust.
+
 ## Governance
 
 Hooks apply to every session that runs against the repo, so controls scale with the number of sessions without adding reviewers. Team hooks live in `.claude/settings.json` in git and are reviewed like code. Non-negotiable hooks go in managed settings owned by the platform team (`org/`), where individual engineers cannot switch them off. Every allow and block decision is logged with a timestamp.

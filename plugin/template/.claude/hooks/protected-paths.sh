@@ -6,7 +6,10 @@ root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 list="$root/.claude/protected-paths"
 [ -f "$list" ] || exit 0
 
-path=$(jq -r '.tool_input.file_path // empty' < /dev/stdin)
+# Read the hook payload with $(cat), never '< /dev/stdin': on Linux, opening /dev/stdin when fd 0 is a socket
+# fails, jq sees nothing, and the hook silently allows the action. Found by the sandbox's evals in CI.
+input=$(cat)
+path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
 [ -n "$path" ] || exit 0
 rel="${path#$root/}"
 
