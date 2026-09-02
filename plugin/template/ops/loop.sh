@@ -33,6 +33,14 @@ Diagnose read-only: inspect the failed runs in the evidence with gh run view --l
       --permission-mode default --allowedTools "$tools" --output-format text > "$log/$ts-diagnosis.md"
     echo "diagnosis written to $log/$ts-diagnosis.md" ;;
   3)
+    # One open proposal per metric. If the triage queue already holds one, do not add another.
+    existing=$(gh pr list --state open --json number,url,headRefName \
+      -q ".[] | select(.headRefName | startswith(\"loop/$metric-\")) | \"#\\(.number) \\(.url)\"" | head -1)
+    if [ -n "$existing" ]; then
+      echo "open proposal already in triage: $existing; not opening another"
+      printf '{"ts":"%s","metric":"%s","skipped":"duplicate of %s"}\n' "$ts" "$metric" "$existing" >> "$log/detections.jsonl"
+      exit 0
+    fi
     branch="loop/$metric-$ts"
     git checkout -q -b "$branch"
     claude -p "The CI metric $metric has breached its 3-sigma control band. Detection report (deterministic, from ops/detect.py):
