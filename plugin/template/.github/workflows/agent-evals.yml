@@ -21,6 +21,13 @@ jobs:
       - run: |
           claude plugin marketplace add jsnkle/ai-native-sdlc
           claude plugin install ai-native-sdlc@jsnkle --scope user
+      - name: Smoke-test the project hooks on this runner
+        # Project hooks run in claude -p without workspace trust (verified); only the permissions
+        # allow list is trust-gated, which is why run.sh passes --allowedTools from each eval.
+        run: |
+          set +e
+          printf '{"tool_input":{"command":"deploy to production"}}' | .claude/hooks/production-gate.sh; echo "production-gate exit=$? (expect 2)"
+          printf '{"tool_input":{"file_path":"%s/migrations/x.sql"}}' "$PWD" | CLAUDE_PROJECT_DIR=$PWD .claude/hooks/protected-paths.sh; echo "protected-paths exit=$? (expect 2 with the default list)"
       - name: Run eval suite
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

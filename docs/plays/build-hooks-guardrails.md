@@ -38,7 +38,7 @@ Two generic hooks ship in the plugin at `plugin/hooks/`: one that blocks edits t
     "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/protected-paths.sh" } ] } ] } }
 ```
 
-**Two things the sandbox taught about writing hooks.** Read the payload with `input=$(cat)` and pipe it to `jq`, not `jq < /dev/stdin`: on a Linux runner the latter can see no input, so the hook exits 0 and silently allows the action, while every test on a Mac passes. And hooks in a project's `.claude/settings.json` only run once the workspace is trusted; on a CI runner nothing has accepted the trust dialog, so either write the trust entry to `~/.claude.json` in the workflow or install the hooks at user level, where they always run. Plugin hooks run regardless of trust.
+**Two things the sandbox taught about writing hooks.** Read the payload with `input=$(cat)` and pipe it to `jq`, not `jq < /dev/stdin`: on a Linux runner the latter can see no input, so the hook exits 0 and silently allows the action, while every test on a Mac passes. And on workspace trust: the hooks reference says project hooks run after the trust dialog is accepted, but a non-interactive `claude -p` run on a fresh CI runner invoked the project hooks without any trust entry, which we verified with an invocation log. What trust does gate there is the project's `permissions.allow` list, which is why CI runs pass `--allowedTools` explicitly. Plugin hooks run regardless of trust.
 
 ## Governance
 
