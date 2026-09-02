@@ -34,7 +34,7 @@ A metrics store the detection script can query (Prometheus, the CI system's API,
 
 ## What it looks like
 
-`plugin/template/ops/bands.yaml` is the article's example for CI test failure rate: a rolling 30-day baseline, Western Electric rules, and three tiers with the tools and routes each may use. Examples of the pattern at work:
+`plugin/template/ops/bands.yaml`, with the detector at `plugin/template/ops/detect.py` and the tiered response at `plugin/template/ops/loop.sh` is the article's example for CI test failure rate: a rolling 30-day baseline, Western Electric rules, and three tiers with the tools and routes each may use. Examples of the pattern at work:
 
 - CI test failure rate breaches 3σ: the agent quarantines the flaky test or opens a revert PR, and the review gate decides.
 - Post-deploy 5xx rate breaches 3σ with a deployment in the window: the agent triggers the existing rollback pipeline.

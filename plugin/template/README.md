@@ -30,3 +30,7 @@ The files support three levels. Start at the first.
 ## Trust the workspace first
 
 Claude Code ignores `permissions.allow` in a project's `.claude/settings.json` until someone has opened the project interactively and accepted the trust dialog. Until then every pre-approved command prompts, and a non-interactive run (`claude -p`) sees none of the allow list and must pass `--allowedTools` itself, as the CI workflows here do. Open the repo in Claude Code once before expecting the allow list to work.
+
+## Closing the loop (Stage 6)
+
+`ops/detect.py` is the deterministic detector (unit tests in `tests/test_detect.py`, needs `pyyaml` as a dev dependency), `ops/bands.yaml` its config, `ops/loop.sh` the tiered response, and `.github/workflows/closing-the-loop.yml` the unattended schedule. `ops/README.md` explains the statistic and the tier mapping. Run `ops/loop.sh` by hand under your own login first; move to the schedule once the PRs it opens are worth triaging.

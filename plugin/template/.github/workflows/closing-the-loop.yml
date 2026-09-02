@@ -1,0 +1,48 @@
+# Closing the loop, unattended (Stage 6: Maintain).
+# Runs ops/loop.sh on a schedule. Detection is deterministic; Claude is invoked only on a breach,
+# with the tools ops/bands.yaml allows for that tier. Anything it proposes arrives as a PR through
+# branch protection; the workflow has no route to main.
+#
+# Needs: ANTHROPIC_API_KEY in repository secrets, and a venv-based Makefile like the template's.
+# The default GITHUB_TOKEN can open the PR but cannot trigger CI on it; use a fine-grained PAT as
+# LOOP_GH_TOKEN if the proposal PRs must run checks automatically.
+name: closing-the-loop
+on:
+  schedule:
+    - cron: '0 6 * * 1-5'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m venv .venv && .venv/bin/pip install -q -r requirements-dev.txt
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: Install the SDLC plugin the loop's propose step uses
+        run: |
+          claude plugin marketplace add jsnkle/ai-native-sdlc
+          claude plugin install ai-native-sdlc@jsnkle --scope user
+      - name: Run the loop
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN || github.token }}
+        run: |
+          git config user.name "closing-the-loop"
+          git config user.email "closing-the-loop@users.noreply.github.com"
+          ops/loop.sh
+      - name: Keep the detection log as a run artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ops-log
+          path: ops/log/
+          if-no-files-found: ignore
