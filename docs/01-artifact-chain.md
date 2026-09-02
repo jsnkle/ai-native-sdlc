@@ -45,7 +45,7 @@ From build onward the artifact is code and its records: the diff and its tests i
 | **Who approves it** | The product owner reviews and corrects it, then accepts or closes it. |
 | **What commits it** | The originator via a git connector from claude.ai or Cowork, or an engineer via `/ai-native-sdlc:intent`. Merge of the PR into `intent/<slug>/` is the acceptance. |
 | **What it fires** | An accepted intent triggers the requirements and design pass. |
-| **Format** | The `intent-format` skill in the plugin. |
+| **Format** | The `intent` skill in the plugin. |
 
 ### spec.md
 
@@ -56,7 +56,7 @@ From build onward the artifact is code and its records: the diff and its tests i
 | **Who approves it** | The product owner reviews it against the idea, resolves each flagged concern with its policy owner, and signs it off. A technical lead is consulted for anything classed as higher risk. |
 | **What commits it** | By hand at first via `/ai-native-sdlc:spec`, later the `spec-on-intent-merge.yml` workflow commits it as a PR when an intent merges. |
 | **What it fires** | An accepted spec starts plan mode in build. |
-| **Format** | The `spec-format` skill. |
+| **Format** | The `spec` skill. |
 
 ### plan.md
 
@@ -67,7 +67,7 @@ From build onward the artifact is code and its records: the diff and its tests i
 | **Who approves it** | The engineer for routine changes; a tech lead or architect for anything classed as higher risk. |
 | **What commits it** | The engineer, via `/ai-native-sdlc:plan`, before any code is written. If implementation departs from the plan, the plan is updated in the same commit. |
 | **What it fires** | Accepting the plan lets Claude implement. |
-| **Format** | The `plan-format` skill. |
+| **Format** | The `plan` skill. |
 
 ### The diff and its tests
 

@@ -1,7 +1,12 @@
 ---
-name: intent-format
+name: intent
 description: Capture an idea, problem, ticket or incident as a committed intent.md in the originator's own words. Use whenever someone wants to write up, brainstorm, or record what they want changed and why, before any spec or plan exists.
+argument-hint: <a sentence describing the problem, or a ticket/incident ID>
 ---
+Invoked as `/ai-native-sdlc:intent <description>`. The originator's starting
+description is `$ARGUMENTS`; if empty, ask for it. Interview until the idea is
+concrete, then write `intent/<slug>/intent.md` and read it back for correction.
+
 # Capture as intent.md
 
 An intent.md is a proto-spec: what is wanted, why, and under which constraints,
@@ -43,4 +48,4 @@ paragraph or a few bullets. Plain language the originator would recognise.
 - Read it back to the originator and correct anything misunderstood.
 - Commit it. Author and timestamp join the record through git.
 - Say who picks it up next: the product owner accepts or closes it, and
-  acceptance is what triggers `spec-format`.
+  acceptance is what triggers `spec`.

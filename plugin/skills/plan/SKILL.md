@@ -1,7 +1,14 @@
 ---
-name: plan-format
+name: plan
 description: In plan mode, turn intent.md and spec.md into a committed plan.md naming the files that change, the order of work, the risks and the proof. Use when an engineer asks for an implementation plan, or starts work on an accepted spec.
+argument-hint: <change-slug>
 ---
+Invoked as `/ai-native-sdlc:plan <change-slug>`, in plan mode. Work on
+`intent/$ARGUMENTS/`; if no slug is given, list folders with a spec.md but no
+plan.md and ask. Read the codebase, change nothing. Interview the engineer on
+what could break, the riskiest step and the options not taken, then write
+`intent/<slug>/plan.md`.
+
 # Plan mode as the default starting point
 
 Nothing is implemented without an accepted plan. Work in plan mode (read the

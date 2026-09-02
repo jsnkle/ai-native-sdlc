@@ -6,9 +6,9 @@ approved it.
 
 | Stage | Artifact | Path | Written by | Accepted by | Acceptance triggers |
 |---|---|---|---|---|---|
-| Plan | `intent.md` | `intent/<slug>/intent.md` | Originator + Claude (`intent-format`) | Product owner | Design pass |
-| Design | `spec.md` | `intent/<slug>/spec.md` | Claude under policy skills (`spec-format`) | Product owner (+ tech lead if higher risk) | Plan mode |
-| Build | `plan.md` | `intent/<slug>/plan.md` | Claude in plan mode (`plan-format`) | Engineer (+ tech lead if higher risk) | Implementation |
+| Plan | `intent.md` | `intent/<slug>/intent.md` | Originator + Claude (`intent`) | Product owner | Design pass |
+| Design | `spec.md` | `intent/<slug>/spec.md` | Claude under policy skills (`spec`) | Product owner (+ tech lead if higher risk) | Plan mode |
+| Build | `plan.md` | `intent/<slug>/plan.md` | Claude in plan mode (`plan`) | Engineer (+ tech lead if higher risk) | Implementation |
 | Build/Test | diff + tests | the branch | Claude, verified by the feedback loop | CI | PR |
 | Deploy | PR + review findings | the PR | Claude review passes per `REVIEW.md` | Code owner via branch protection | Pipeline |
 | Maintain | incident record → new `intent.md` | `intent/<slug>/intent.md` | Monitoring trigger + Claude | Service owner triage | Plan, again |

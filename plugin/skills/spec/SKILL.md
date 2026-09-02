@@ -1,7 +1,14 @@
 ---
-name: spec-format
+name: spec
 description: Turn an accepted intent.md into a requirements-and-design spec.md, constrained by the organisation's policy skills, with areas of concern flagged. Use when a product owner asks for a spec, requirements, or design from an intent.
+argument-hint: <change-slug>
 ---
+Invoked as `/ai-native-sdlc:spec <change-slug>`. Work on
+`intent/$ARGUMENTS/intent.md`; if no slug is given, list the folders under
+`intent/` that have an intent.md but no spec.md and ask which one. Apply every
+policy skill available. Write `intent/<slug>/spec.md` and lead the summary with
+the areas of concern, especially where policies contradict.
+
 # Requirements and design as spec.md
 
 Requirements and design collapse into one session. You read the accepted
@@ -46,4 +53,4 @@ Rules that matter:
   what was decided.
 - Say what happens next: the product owner reviews, resolves concerns with the
   named policy owners, consults a tech lead for higher-risk changes, and their
-  acceptance starts plan mode (`plan-format`).
+  acceptance starts plan mode (`plan`).

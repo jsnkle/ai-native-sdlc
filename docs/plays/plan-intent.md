@@ -21,7 +21,7 @@ None.
 ## Infrastructure
 
 - Claude access for people who are not engineers (claude.ai or Cowork).
-- An agreed intent template. In this repo it is the `intent-format` skill in the plugin.
+- An agreed intent template. In this repo it is the `intent` skill in the plugin.
 - A shared, version-controlled home that the product owner watches. For a single product it is the `intent/` folder in the product repo, which keeps the artifact chain next to the code derived from it. A dedicated intent repo is only worth it when intent spans many repositories.
 - A connector from claude.ai or Cowork to the version-control system, so contributors without git experience can have Claude commit on their behalf.
 
@@ -31,13 +31,13 @@ Standing up the home and deciding who can write to it is a one-time job for the 
 
 1. The originator describes the problem to Claude in their own words: what they cannot do today, who is affected, what better looks like, what is out of scope. No formal language is required.
 2. Brainstorm until the idea is concrete. Claude asks the questions an analyst would ask: scope, users, constraints, what success looks like.
-3. Ask Claude to write the result as `intent.md` using the organization's template. In Claude Code that is `/ai-native-sdlc:intent`; in claude.ai or Cowork the `intent-format` skill is attached to the project.
+3. Ask Claude to write the result as `intent.md` using the organization's template. In Claude Code that is `/ai-native-sdlc:intent`; in claude.ai or Cowork the `intent` skill is attached to the project.
 4. The originator corrects anything Claude misunderstood.
 5. Commit to `intent/<slug>/intent.md`. Author and timestamp join the record. The product owner picks the idea up from there.
 
 ## What it looks like
 
-An intent has five headings: Problem, Proposed outcome, Affected users and systems, Constraints, Open questions, plus an author line and a status. The `intent-format` skill in `plugin/skills/intent-format/SKILL.md` carries the template and a worked example. `plugin/template/intent/README.md` explains the folder and the slug convention.
+An intent has five headings: Problem, Proposed outcome, Affected users and systems, Constraints, Open questions, plus an author line and a status. The `intent` skill in `plugin/skills/intent/SKILL.md` carries the template and a worked example. `plugin/template/intent/README.md` explains the folder and the slug convention.
 
 ```markdown
 # Intent: claims status self-service

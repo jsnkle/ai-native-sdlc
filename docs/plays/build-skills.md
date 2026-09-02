@@ -32,7 +32,7 @@ One policy with a named owner and a written source of truth.
 
 ## What it looks like
 
-`plugin/skills/secure-api-review/SKILL.md` is the article's example, an API security standard with four numbered rules and a script to run. The format skills in the same folder (`intent-format`, `spec-format`, `plan-format`) are skills too: they encode the organization's artifact templates so every intent, spec, and plan has the same shape.
+`plugin/skills/secure-api-review/SKILL.md` is the article's example, an API security standard with four numbered rules and a script to run. The format skills in the same folder (`intent`, `spec`, `plan`) are skills too: they encode the organization's artifact templates so every intent, spec, and plan has the same shape.
 
 ## Governance
 

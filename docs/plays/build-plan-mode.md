@@ -32,7 +32,7 @@ Claude Code with access to the repository.
 
 ## What it looks like
 
-`plan.md` has four headings: Files that change, Order of work, Risks, Proof. The `plan-format` skill in `plugin/skills/plan-format/SKILL.md` carries the template and the claims-status example from the article.
+`plan.md` has four headings: Files that change, Order of work, Risks, Proof. The `plan` skill in `plugin/skills/plan/SKILL.md` carries the template and the claims-status example from the article.
 
 ### Auto mode
 

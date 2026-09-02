@@ -1,11 +1,13 @@
 ---
 name: babysit-pr
-description: Sweep a PR's unresolved review comments and failing checks, fix, push, repeat until green
-argument-hint: [PR number; defaults to the current branch's PR]
+description: Sweep a pull request's unresolved review comments and failing checks, fix them, push, and repeat until the PR is green and waiting only on code-owner approval. Use when asked to babysit, shepherd, or get a PR to green.
+argument-hint: "[PR number; defaults to the current branch's PR]"
 ---
-Babysit pull request `$ARGUMENTS` (or the PR for the current branch:
-`gh pr view --json number,url`) until it is green and waiting only on
-code-owner approval.
+# Babysit a pull request
+
+Invoked as `/ai-native-sdlc:babysit-pr [number]`. Work on PR `$ARGUMENTS`, or
+the PR for the current branch (`gh pr view --json number,url`), until it is
+green and waiting only on code-owner approval.
 
 Loop:
 1. `gh pr view --json reviewThreads,statusCheckRollup` (or `gh api` on the
@@ -26,4 +28,5 @@ was pushed, what remains.
 
 Never approve, never merge, never resolve a thread the reviewer has not
 resolved, never force-push. The agent that wrote the code has no route to
-approve it.
+approve it. This is the fix loop from the PR review play
+(`docs/plays/deploy-pr-review.md`).

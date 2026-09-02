@@ -1,7 +1,14 @@
 ---
 name: adopt
 description: Brownfield adoption of the AI-native SDLC in an existing repository. Use when asked to adopt, install, bootstrap or set up the AI-native SDLC, the intent/spec/plan artifact chain, CLAUDE.md, REVIEW.md or the SDLC hooks in a project that already has code.
+argument-hint: "[assess | claude-md | intent | hooks | review | all]"
 ---
+Invoked as `/ai-native-sdlc:adopt [scope]`. Scope is `$ARGUMENTS`, default
+`assess`, which changes nothing. Scopes map to the steps below: `assess` runs
+step 0 only; `claude-md` runs 0 and 1; `intent` runs 0 and 2; `hooks` runs 0
+and 3; `review` runs 0 and 4; `all` runs 0 to 5 in order. Every scope ends
+with the step 6 report.
+
 # Adopt the AI-native SDLC in an existing repo
 
 You do the mechanical half of the brownfield runbook (`brownfield/README.md`

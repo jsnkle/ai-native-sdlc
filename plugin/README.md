@@ -25,19 +25,19 @@ so anyone cloning the repo gets it on first launch.
 
 | Piece | Path | Play it implements |
 |---|---|---|
-| Skill `intent-format` | `skills/intent-format/` | [Plan: capture as intent.md](../docs/plays/plan-intent.md) |
-| Skill `spec-format` | `skills/spec-format/` | [Design: requirements and design](../docs/plays/design-spec.md) |
-| Skill `plan-format` | `skills/plan-format/` | [Build: plan mode as the default](../docs/plays/build-plan-mode.md) |
+| Skill `intent` | `skills/intent/` | [Plan: capture as intent.md](../docs/plays/plan-intent.md) |
+| Skill `spec` | `skills/spec/` | [Design: requirements and design](../docs/plays/design-spec.md) |
+| Skill `plan` | `skills/plan/` | [Build: plan mode as the default](../docs/plays/build-plan-mode.md) |
 | Skill `adopt` | `skills/adopt/` | [Brownfield runbook](../brownfield/README.md), mechanical half |
 | Skill `secure-api-review` | `skills/secure-api-review/` | [Build: skills as institutional knowledge](../docs/plays/build-skills.md) (example policy, replace it) |
 | Agent `verifier` | `agents/verifier.md` | [Build: parallel sessions and subagents](../docs/plays/build-parallel-sessions.md), [Test: feedback loop](../docs/plays/test-feedback-loop.md) |
 | Agent `simplifier` | `agents/simplifier.md` | Build: parallel sessions and subagents |
 | Agent `researcher` | `agents/researcher.md` | Build: parallel sessions and subagents |
-| Command `/ai-native-sdlc:intent` | `commands/intent.md` | Plan |
-| Command `/ai-native-sdlc:spec` | `commands/spec.md` | Design |
-| Command `/ai-native-sdlc:plan` | `commands/plan.md` | Build |
-| Command `/ai-native-sdlc:babysit-pr` | `commands/babysit-pr.md` | [Deploy: AI in the PR review loop](../docs/plays/deploy-pr-review.md) |
-| Command `/ai-native-sdlc:adopt` | `commands/adopt.md` | Brownfield |
+| `/ai-native-sdlc:intent` | `skills/intent/` | Plan |
+| `/ai-native-sdlc:spec` | `skills/spec/` | Design |
+| `/ai-native-sdlc:plan` | `skills/plan/` | Build |
+| `/ai-native-sdlc:babysit-pr` | `skills/babysit-pr/` | [Deploy: AI in the PR review loop](../docs/plays/deploy-pr-review.md) |
+| `/ai-native-sdlc:adopt` | `skills/adopt/` | Brownfield |
 | Hook `protect-tests.sh` | `hooks/scripts/` | [Test: feedback loop](../docs/plays/test-feedback-loop.md), the fix-task guard |
 | Hook `no-secrets.sh` | `hooks/scripts/` | [Build: hooks as guardrails](../docs/plays/build-hooks-guardrails.md) |
 | Reference | `references/artifact-formats.md` | The artifact chain in one page |
@@ -63,3 +63,7 @@ Bump `version` in `.claude-plugin/plugin.json` and the root
 their next `claude plugin update`. Skill and hook changes go through PR review
 like code, and the eval workflow in the template re-runs on any change under
 `.claude/`.
+
+## Why there is no `commands/` directory
+
+Claude Code puts commands and skills in one namespace, so a `commands/adopt.md` next to `skills/adopt/` produced two `/ai-native-sdlc:adopt` entries and the command won, without the skill body. Every user-facing entry point is therefore a skill with an `argument-hint`, invoked as `/ai-native-sdlc:<name>`; the same skill also triggers on its description when the task comes up in conversation.

@@ -34,7 +34,7 @@ docs/              The methodology for humans. One file per play, plus roles, me
                    adoption order and the source-of-truth decision.
 plugin/            The Claude Code plugin every project installs: skills that write
                    intent, spec and plan; verifier, simplifier and researcher agents;
-                   slash commands for each gate; the /adopt command; guardrail hooks.
+                   a skill for each gate; the /adopt skill; guardrail hooks.
 plugin/template/   Per-repo files copied into a project: CLAUDE.md, REVIEW.md, the
                    intent/ artifact home, .claude/settings.json and project hooks, CI
                    workflows, evals, and the monitoring bands. It lives inside the
