@@ -26,3 +26,7 @@ The files support three levels. Start at the first.
 1. **By hand.** Engineers and product owners run the plugin's slash commands and commit the artifacts themselves. Only `CLAUDE.md`, `REVIEW.md`, `intent/` and the hooks are in use.
 2. **Codified.** The prompts are stable and live in the plugin; review runs on every PR; evals guard configuration changes.
 3. **Triggered.** Each accepted artifact fires the next gate: an intent merge runs the spec pass, a merged PR runs the pipeline, a band breach writes the next intent. The workflows here are the plumbing.
+
+## Trust the workspace first
+
+Claude Code ignores `permissions.allow` in a project's `.claude/settings.json` until someone has opened the project interactively and accepted the trust dialog. Until then every pre-approved command prompts, and a non-interactive run (`claude -p`) sees none of the allow list and must pass `--allowedTools` itself, as the CI workflows here do. Open the repo in Claude Code once before expecting the allow list to work.

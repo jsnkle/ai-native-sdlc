@@ -65,3 +65,7 @@ Plays: maintenance and closing the loop, recurring codebase scans, Claude on cal
 - Keep the legacy record as the audit system if auditors expect it. Put the record ID in every artifact and the commit SHA in every record.
 - Do not remove an existing human gate until its hook equivalent has run for a while and the wait time per gate is visible.
 - Existing static analysis and dependency scanning stay in CI. The model-driven review and scans cover what those are not built to find.
+
+## Trust the workspace first
+
+Claude Code ignores `permissions.allow` in a project's `.claude/settings.json` until someone has opened the project interactively and accepted the trust dialog. Until then every pre-approved command prompts, and a non-interactive run (`claude -p`) sees none of the allow list and must pass `--allowedTools` itself, as the CI workflows here do. Open the repo in Claude Code once before expecting the allow list to work.
