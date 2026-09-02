@@ -1,0 +1,12 @@
+{
+  "name": "add-endpoint",
+  "prompt": "Add a GET /health/details endpoint that returns the build version and uptime. Follow CLAUDE.md, add the integration test, and run the verification commands before reporting done.",
+  "allowedTools": "Read,Edit,Write,Bash(make test),Bash(make lint)",
+  "checks": {
+    "commands": ["make test", "make lint"],
+    "files_changed_match": ["src/"],
+    "files_unchanged": ["src/gen/", "migrations/"],
+    "output_contains": ["make test"],
+    "output_not_contains": ["skipped the test", "deleted the test"]
+  }
+}

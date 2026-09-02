@@ -1,0 +1,55 @@
+# Stage 2: Design, automated (maturity ladder step 3: CI-triggered).
+# When an intent.md merges to main, run the spec pass non-interactively with the org skills loaded
+# and open a PR with spec.md. The product owner's first involvement becomes the review.
+# Run the spec pass by hand (/ai-native-sdlc:spec) until the format is stable, then enable this.
+# Needs ANTHROPIC_API_KEY in repository secrets and the ai-native-sdlc plugin installable in CI.
+name: Spec on intent merge
+on:
+  push:
+    branches: [main]
+    paths: ['intent/*/intent.md']
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: Find intents that changed and have no spec yet
+        id: intents
+        run: |
+          changed=$(git diff --name-only HEAD~1 HEAD -- 'intent/*/intent.md' || true)
+          todo=""
+          for f in $changed; do
+            d=$(dirname "$f")
+            [ -f "$d/spec.md" ] || todo="$todo $d"
+          done
+          echo "dirs=$todo" >> "$GITHUB_OUTPUT"
+      - name: Write spec.md
+        if: steps.intents.outputs.dirs != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          for d in ${{ steps.intents.outputs.dirs }}; do
+            claude -p "Read $d/intent.md and produce a requirements and design spec for integrating it into our existing codebase. Apply the skills available to you so the plan conforms to our brand guidelines, security policies and UX standards. Document the spec fully as $d/spec.md, ready to hand to the engineering team. Describe clearly any areas of concern, especially where you cannot satisfy contradicting policies." \
+              --allowedTools "Read,Grep,Glob,Write($d/spec.md)" \
+              --output-format text
+          done
+      - name: Open PR
+        if: steps.intents.outputs.dirs != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="spec/$(date +%Y%m%d-%H%M%S)"
+          git config user.name "ai-native-sdlc bot"
+          git config user.email "bot@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add intent/
+          git commit -m "spec: draft spec.md for ${{ steps.intents.outputs.dirs }}"
+          git push -u origin "$branch"
+          gh pr create --title "Spec: ${{ steps.intents.outputs.dirs }}" \
+            --body "Drafted from the accepted intent.md. Product owner: review against the idea, work the flagged concerns first, then approve to start plan mode."

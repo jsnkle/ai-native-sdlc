@@ -1,0 +1,33 @@
+# Stage 5: Deploy, CI/CD integration. A read-only judgment step: when the build fails, Claude reads the log
+# and posts a three-line triage to the PR thread. No write access to the repo.
+# Needs ANTHROPIC_API_KEY. Replace `make build` and out/build.log with your real build.
+name: Build
+on:
+  pull_request:
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          mkdir -p out
+          make build 2>&1 | tee out/build.log
+          exit ${PIPESTATUS[0]}
+      - name: Triage failed build
+        if: failure()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude -p "Read the build log at out/build.log. Identify the most
+          likely cause, say whether the failure looks flaky or real, and write a
+          three-line summary for the PR thread." --allowedTools "Read" >> triage.md
+      - name: Post triage
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment ${{ github.event.pull_request.number }} --body-file triage.md

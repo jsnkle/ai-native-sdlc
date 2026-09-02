@@ -1,0 +1,5 @@
+.DS_Store
+*.log
+result.json
+triage.md
+node_modules/

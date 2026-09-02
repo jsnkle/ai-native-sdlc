@@ -1,0 +1,9 @@
+# Code owners approve PRs via branch protection. The agent that wrote the code cannot approve it.
+# Replace the handles. Keep the agent configuration owned by the tech lead so changes to it are reviewed like code.
+*                     @{{PROJECT_NAME}}-maintainers
+CLAUDE.md             @{{PROJECT_NAME}}-tech-lead
+REVIEW.md             @{{PROJECT_NAME}}-tech-lead
+.claude/              @{{PROJECT_NAME}}-tech-lead
+intent/               @{{PROJECT_NAME}}-product-owner
+migrations/           @{{PROJECT_NAME}}-tech-lead
+infra/                @{{PROJECT_NAME}}-platform

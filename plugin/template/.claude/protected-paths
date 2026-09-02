@@ -1,0 +1,7 @@
+# Paths Claude may not edit without a change ticket. Bash globs, relative to the repo root.
+# The protected-paths hook blocks Write/Edit here and explains why.
+src/gen/**
+**/generated/**
+migrations/**
+infra/**
+.github/workflows/production-*.yml

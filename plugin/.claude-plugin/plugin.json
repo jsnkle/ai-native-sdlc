@@ -1,0 +1,9 @@
+{
+  "name": "ai-native-sdlc",
+  "version": "0.1.0",
+  "description": "The AI-native SDLC as a plugin: skills that write intent.md, spec.md and plan.md, an adopt skill for existing repos, verifier/simplifier/researcher subagents, PR babysitting, and hooks that protect tests during fixes and keep secrets out of the diff.",
+  "author": {
+    "name": "jsnkle"
+  },
+  "keywords": ["sdlc", "intent", "spec", "plan", "governance", "hooks", "review"]
+}

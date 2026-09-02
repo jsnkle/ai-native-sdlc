@@ -1,0 +1,29 @@
+# Continuous evals (Stage 4: Test). Runs whenever the configuration that steers the agent changes, and nightly.
+# Needs ANTHROPIC_API_KEY in repository secrets with budget for eval runs.
+name: Agent evals
+on:
+  pull_request:
+    paths: ['CLAUDE.md', 'REVIEW.md', '.claude/**', 'evals/**']
+  schedule:
+    - cron: '0 2 * * *'
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: Run eval suite
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -e
+          fail=0
+          for eval in evals/*.json; do
+            echo "== $eval"
+            claude -p "$(jq -r '.prompt' "$eval")" \
+              --allowedTools "$(jq -r '.allowedTools // "Read,Edit,Bash(make test)"' "$eval")" \
+              --output-format json > result.json || true
+            ./evals/check.sh "$eval" result.json || fail=1
+            git checkout -- . && git clean -fdq
+          done
+          exit $fail

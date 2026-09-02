@@ -1,0 +1,46 @@
+---
+name: plan-format
+description: In plan mode, turn intent.md and spec.md into a committed plan.md naming the files that change, the order of work, the risks and the proof. Use when an engineer asks for an implementation plan, or starts work on an accepted spec.
+---
+# Plan mode as the default starting point
+
+Nothing is implemented without an accepted plan. Work in plan mode (read the
+codebase, change nothing) until the engineer accepts. The approved plan is
+committed as `plan.md` and later stages check the diff against it.
+
+## Inputs
+
+Read `intent/<slug>/intent.md` and `intent/<slug>/spec.md`. If no spec exists,
+plan from the intent alone and say so at the top of the plan. Read `CLAUDE.md`
+for commands, conventions and known mistakes. Read the code the spec touches.
+
+## Interview the engineer
+
+Ask, then answer in the plan:
+
+- What could this change break? Which callers, consumers, contracts?
+- Which step is the riskiest, and what makes it so?
+- What other approaches were possible, and why were they not chosen?
+- Which parts touch different files and could run as parallel sessions?
+
+Iterate until an engineer who has never seen the conversation could implement
+the change from the plan alone.
+
+## Write the file
+
+Path: `intent/<slug>/plan.md`. Use `references/plan-template.md`. The four
+core sections are the article's: **Files that change**, **Order of work**,
+**Risks**, **Proof**. Proof must be quantifiable so the session can verify
+without asking: "all tests in `test_status.py` pass", "screenshot matches the
+attached mock", "the endpoint returns 200 with the new field".
+
+## Rules
+
+- Commit `plan.md` before implementation begins. The plan joins the audit
+  trail and the PR review compares the diff to it.
+- **When implementation departs from the plan, update `plan.md` in the same
+  commit.** Never let the diff and the plan disagree at merge.
+- Routine changes are approved by the engineer. Anything the organisation
+  classes as higher risk goes to a tech lead or architect before code.
+- With a solid plan, implementation is usually one pass. If it is not, the
+  plan was wrong; fix the plan, then the code.
