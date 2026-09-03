@@ -94,3 +94,18 @@ Level 4 is only safe once the guardrails from the earlier plays are in place: a 
 **Brownfield** means walking the graph in dependency order on a repo that already has code, conventions, a CI pipeline, and probably a Jira project. The plugin installs in one step. The template files are added one play at a time, each one a small PR the team reviews like any other. The `/ai-native-sdlc:adopt` command does the mechanical work of each step; `../brownfield/README.md` is the human runbook that says what to decide before running it.
 
 The end state is identical. A brownfield repo six months in should be indistinguishable from a greenfield one.
+
+## What the fully automated ladder looks like in practice
+
+All four CI-triggered plays were exercised on a sandbox repository on 2026-09-03, each with a real trigger:
+
+| Trigger | Workflow | What happened |
+|---|---|---|
+| An accepted `intent.md` pushed to main | `spec-on-intent-merge.yml` | A spec PR opened under the token's identity, with the policy skill applied and nine concerns for the product owner |
+| A PR opened with a new route and no test | `claude-review.yml` | One comment-only review: seven findings, including three the author had not planted |
+| `@claude` comment from the repo owner | `claude-mention.yml` | The babysit skill pushed fixes and replied in each thread; CI re-ran on the push |
+| A PR that breaks the build | `triage-failed-build.yml` | A triage comment naming the failing line and its commit |
+
+Two prerequisites decided whether the chain connected. A PR or push made with the default Actions token triggers nothing else, so without a fine-grained token in `LOOP_GH_TOKEN` a bot-opened spec PR gets no CI and no review. And the repository setting that lets Actions create pull requests must be on. Both are in the workflow headers.
+
+When the sandbox work is done, disable the workflows that call Claude rather than deleting them: `gh workflow disable <name>` per workflow, and `gh workflow enable` to bring one back. The plain CI check stays on.
