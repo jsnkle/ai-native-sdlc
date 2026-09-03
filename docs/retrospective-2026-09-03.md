@@ -12,7 +12,7 @@ Two days, one sandbox repository, every stage of the playbook run at least once.
 6. **Small histories make bad baselines.** Two failures in five read as drift, not a spike, because the baseline held the earlier failure; four were needed for 3σ. Draft-PR runs had to be excluded, a dedup guard added so one metric opens one proposal, and the detector's own proposal noted that closing a PR does not remove its failures from the baseline.
 7. **Separation of duties held all the way through.** Every approval and merge was a human's. The agent's own review of the automation PR found that anyone could trigger the `@claude` workflow on a public repo; it is now gated by author association.
 8. **The artifact chain does real work.** Departures from `plan.md` were recorded in the same commit without being asked, three times. A review pass flagged when `REVIEW.md` and `CLAUDE.md` went stale. The loop's intents carried questions a human must decide.
-9. **The chain is heavy for tiny changes.** CLAUDE.md's rule that every change starts with an intent made the agent write intent, spec and plan for a one-line route in an eval. A "small change" exemption belongs in CLAUDE.md.
+9. **The chain was never over-applied, but the rule reads as absolute.** Every time the agent produced intent, spec and plan it was for a new route or capability, which deserves the chain; the version route cited in an earlier draft of this note was a correct application, not a heavy one. What was observed is that CLAUDE.md's "every change starts as an intent" is read literally, so a typo fix or a pure refactor would very likely get the same treatment. That is a prediction, not a finding. The decision on 2026-09-03 was to leave the rule alone until a real project hits the problem, and to keep the tiered proposal below ready for when it does.
 10. **Everything automated is a Claude call with a price.** Disable the workflows when a repo is idle; the README lists how.
 
 ## Scorecard against the article
@@ -44,7 +44,7 @@ Scores are out of 10 for adherence to the article's steps for that play, judged 
 
 ## What to do next, in order
 
-1. Add a "small change" exemption to CLAUDE.md so a one-line fix does not need three artifacts.
+1. Leave CLAUDE.md's intent rule as it is until a real change shows it over-applied. If that happens, the ready-made proposal is: draw the line by whether the change makes a decision someone other than the engineer should own, not by diff size. No artifacts when nothing observable changes and no decision is made (a refactor with unchanged tests; a fix that makes an existing test pass without changing what it asserts); intent plus plan when a behaviour change was asked for in words with no open questions and nothing policy-shaped; the full chain for any new or changed interface, anything touching auth, PII, money or an external system, any originator who is not the engineer, any open question. Three safeguards make it safe: the exemption is a stated claim in the PR body, the review pass re-derives the tier and flags a wrong claim as Important, and a change that turns out to need a decision mid-way stops and writes the intent.
 2. Exercise the simplifier and researcher agents in a build, or drop them.
 3. Grow the eval suite from the incidents that already happened and add a pass-rate threshold.
 4. Instrument the article's leading indicators from git and PR metadata; that is a script, not a platform.
