@@ -41,3 +41,5 @@ Separation of duties is preserved: the agent that wrote the code has no way to a
 
 - **Leading.** Time to first review, which should fall to minutes, and the share of review comments resolved without a human touching the branch, from git.
 - **Lagging.** Defects and vulnerabilities caught before merge set against those escaping to production, from PR history and the incident tracker.
+
+**Template files.** `plugin/template/.github/workflows/claude-review.yml` runs the REVIEW.md passes on every opened PR and posts one comment-only review; `claude-mention.yml` answers `@claude` comments from owners, members and collaborators by running the babysit-pr skill, or a fresh review for `@claude review`. Both were exercised on the sandbox on 2026-09-03; the review's first run found a trigger-by-anyone hole in the mention workflow, which is why it is gated by author association.

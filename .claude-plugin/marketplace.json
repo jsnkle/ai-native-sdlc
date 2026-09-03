@@ -12,7 +12,7 @@
       "name": "ai-native-sdlc",
       "source": "./plugin",
       "description": "The shared half of the AI-native SDLC: skills that write intent.md, spec.md and plan.md; verifier, simplifier and researcher agents; user-invocable skills for each stage gate and an /adopt skill for existing repos; and guardrail hooks that protect tests during a fix and keep secrets out of the diff.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "author": {
         "name": "jsnkle"
       },

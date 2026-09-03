@@ -3,6 +3,11 @@
 All notable changes to the plugin and template are recorded here. The plugin version in
 `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` moves together.
 
+## 0.2.1 - 2026-09-03
+
+- Template gains `claude-review.yml` (one comment-only review per PR from REVIEW.md) and `claude-mention.yml` (`@claude` fix loop, gated to owners, members and collaborators). `spec-on-intent-merge.yml` diffs the whole push and uses the spec skill; `triage-failed-build.yml` triages only when the build step failed. All four exercised with real triggers on the sandbox.
+- Template README indexes every file; docs record the automated ladder and the shutdown method.
+
 ## 0.2.0 - 2026-09-02
 
 Everything below was found by running the whole playbook end to end on a sandbox repository, including the unattended Maintain stage and the continuous evals in CI.

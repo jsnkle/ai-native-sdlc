@@ -38,3 +38,14 @@ Claude Code ignores `permissions.allow` in a project's `.claude/settings.json` u
 ## Review and fix loop in CI (Stage 5)
 
 `.github/workflows/claude-review.yml` runs the REVIEW.md passes on every opened PR and posts one comment-only review. `.github/workflows/claude-mention.yml` answers `@claude` comments: `@claude review` for a fresh pass, anything else runs the babysit-pr skill to address threads and failing checks. Both need `ANTHROPIC_API_KEY`; pushes and PRs made with the default Actions token do not trigger other workflows, so set `LOOP_GH_TOKEN` (a fine-grained PAT with contents and pull-requests write) for the full chain.
+
+## File index for the pieces added after the first cut
+
+| File | Play | Notes |
+|---|---|---|
+| `evals/run.sh`, `evals/check.sh` | Test: continuous evals | the runner (local and CI) and the per-case checker |
+| `evals/example-add-endpoint.json` | Test: continuous evals | one example case; replace with cases from your own incidents |
+| `intent/_example/{intent,spec,plan}.md` | Plan, Design, Build | the playbook's claims-status example as a complete chain; `new-project.sh` omits it unless `--with-example` |
+| `ops/__init__.py` | Maintain | lets `tests/test_detect.py` import the detector |
+| `.github/workflows/claude-review.yml` | Deploy: PR review | one comment-only review per opened PR, from REVIEW.md |
+| `.github/workflows/claude-mention.yml` | Deploy: fix loop | `@claude` from an owner, member or collaborator runs babysit-pr or a fresh review |
