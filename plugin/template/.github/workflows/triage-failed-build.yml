@@ -1,6 +1,7 @@
 # Stage 5: Deploy, CI/CD integration. A read-only judgment step: when the build fails, Claude reads the log
 # and posts a three-line triage to the PR thread. No write access to the repo.
-# Needs ANTHROPIC_API_KEY. Replace `make build` and out/build.log with your real build.
+# Needs ANTHROPIC_API_KEY. Replace `make build` and out/build.log with your real build. Where ci.yml already
+# builds on every PR, fold the triage steps into that job instead of running the build twice.
 name: Build
 on:
   pull_request:
@@ -17,12 +18,13 @@ jobs:
           python-version: "3.12"
       - run: python3 -m venv .venv && .venv/bin/pip install -q -r requirements-dev.txt
       - name: Build
+        id: build
         run: |
           mkdir -p out
           make build 2>&1 | tee out/build.log
           exit ${PIPESTATUS[0]}
       - name: Triage failed build
-        if: failure()
+        if: failure() && steps.build.outcome == 'failure'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -31,7 +33,7 @@ jobs:
           likely cause, say whether the failure looks flaky or real, and write a
           three-line summary for the PR thread." --allowedTools "Read" >> triage.md
       - name: Post triage
-        if: failure()
+        if: failure() && steps.build.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh pr comment ${{ github.event.pull_request.number }} --body-file triage.md

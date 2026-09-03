@@ -3,6 +3,10 @@
 # unresolved comments and failing checks, pushes fixes, and replies in the threads. It never approves or
 # merges. The claude-code-action does the same job with more polish; this is the dependency-free form.
 # Needs ANTHROPIC_API_KEY, the plugin installable in CI, and for pushes to trigger CI, LOOP_GH_TOKEN.
+# Who may trigger it: only comments from the repository's owner, members or collaborators, never from
+# a bot, so a stranger on a public repo cannot spend credits or run code by writing "@claude".
+# Separation of duties: the agent cannot unlock a merge. Branch protection requires a code-owner
+# review, and neither the Actions token nor a PAT scoped to this workflow is a code owner.
 name: Claude mention
 on:
   issue_comment:
@@ -13,7 +17,12 @@ permissions:
   actions: read
 jobs:
   respond:
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '@claude')
+    if: >-
+      github.event.issue.pull_request
+      && contains(github.event.comment.body, '@claude')
+      && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+      && github.event.comment.user.type != 'Bot'
+      && !startsWith(github.event.comment.body, '[claude-mention]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,8 +58,8 @@ jobs:
               --allowedTools "Read,Grep,Glob,Bash(gh pr view *),Bash(gh pr diff *),Bash(gh api *),Bash(git log *),Bash(git diff *),Bash(git show *),Bash(cat *),Bash(ls *)" \
               --output-format text
           else
-            claude -p "/ai-native-sdlc:babysit-pr $PR. A person wrote this on the PR: \"$COMMENT\". Address it along with any unresolved review threads and failing checks. Non-interactive: do not ask questions; never weaken a test; if a comment is wrong, reply with the reasoning and leave it for a human." \
+            claude -p "/ai-native-sdlc:babysit-pr $PR. A person wrote this on the PR: \"$COMMENT\". Address it along with any unresolved review threads and failing checks. Non-interactive: do not ask questions; never weaken a test; if a comment is wrong, reply with the reasoning and leave it for a human. Start every reply you post with the text [claude-mention] and never write @claude in a reply, so your own comments cannot re-trigger this workflow." \
               --permission-mode acceptEdits \
-              --allowedTools "Read,Write,Edit,Glob,Grep,Agent,Skill,Bash(make *),Bash(git *),Bash(gh *),Bash(ls *),Bash(cat *),Bash(find *),Bash(.venv/bin/*),Bash(grep *),Bash(head *),Bash(tail *),Bash(sleep *)" \
+              --allowedTools "Read,Write,Edit,Glob,Grep,Agent,Skill,Bash(make *),Bash(git *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr checks *),Bash(gh pr comment *),Bash(gh run view *),Bash(gh run list *),Bash(gh api *),Bash(ls *),Bash(cat *),Bash(find *),Bash(.venv/bin/*),Bash(grep *),Bash(head *),Bash(tail *),Bash(sleep *)" \
               --output-format text
           fi

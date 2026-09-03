@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - run: npm install -g @anthropic-ai/claude-code
       - run: |
           claude plugin marketplace add jsnkle/ai-native-sdlc
@@ -28,7 +28,10 @@ jobs:
       - name: Find intents that changed and have no spec yet
         id: intents
         run: |
-          changed=$(git diff --name-only HEAD~1 HEAD -- 'intent/*/intent.md' || true)
+          # Compare the whole push, not just the tip commit: a rebase merge can carry several commits.
+          before='${{ github.event.before }}'
+          git cat-file -e "$before" 2>/dev/null || before=$(git rev-parse HEAD~1)
+          changed=$(git diff --name-only "$before" HEAD -- 'intent/*/intent.md' || true)
           todo=""
           for f in $changed; do
             d=$(dirname "$f")
@@ -39,8 +42,9 @@ jobs:
         if: steps.intents.outputs.dirs != ''
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DIRS: ${{ steps.intents.outputs.dirs }}
         run: |
-          for d in ${{ steps.intents.outputs.dirs }}; do
+          for d in $DIRS; do
             slug=$(basename "$d")
             claude -p "/ai-native-sdlc:spec $slug. Non-interactive: do not ask questions; decide where the intent leaves a decision open, state the decision, and carry forward what only a human can answer. Write $d/spec.md and do not commit; the workflow commits." \
               --permission-mode acceptEdits \
@@ -51,13 +55,14 @@ jobs:
         if: steps.intents.outputs.dirs != ''
         env:
           GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN || github.token }}
+          DIRS: ${{ steps.intents.outputs.dirs }}
         run: |
           branch="spec/$(date +%Y%m%d-%H%M%S)"
           git config user.name "ai-native-sdlc bot"
           git config user.email "bot@users.noreply.github.com"
           git checkout -b "$branch"
           git add intent/
-          git commit -m "spec: draft spec.md for ${{ steps.intents.outputs.dirs }}"
+          git commit -m "spec: draft spec.md for $DIRS"
           git push -u origin "$branch"
-          gh pr create --title "Spec: ${{ steps.intents.outputs.dirs }}" \
+          gh pr create --title "Spec: $DIRS" \
             --body "Drafted from the accepted intent.md. Product owner: review against the idea, work the flagged concerns first, then approve to start plan mode."
