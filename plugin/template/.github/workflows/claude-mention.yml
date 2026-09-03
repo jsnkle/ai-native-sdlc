@@ -1,0 +1,56 @@
+# Stage 5: Deploy, the fix loop. A reviewer or author writes "@claude ..." on a PR and Claude addresses it:
+# "@claude review" runs a fresh review pass; anything else runs the babysit-pr skill, which addresses
+# unresolved comments and failing checks, pushes fixes, and replies in the threads. It never approves or
+# merges. The claude-code-action does the same job with more polish; this is the dependency-free form.
+# Needs ANTHROPIC_API_KEY, the plugin installable in CI, and for pushes to trigger CI, LOOP_GH_TOKEN.
+name: Claude mention
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+jobs:
+  respond:
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.LOOP_GH_TOKEN || github.token }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m venv .venv && .venv/bin/pip install -q -r requirements-dev.txt
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: |
+          claude plugin marketplace add jsnkle/ai-native-sdlc
+          claude plugin install ai-native-sdlc@jsnkle --scope user
+      - name: Check out the PR branch
+        env:
+          GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN || github.token }}
+          PR: ${{ github.event.issue.number }}
+        run: |
+          gh pr checkout "$PR"
+          git config user.name "claude-mention"
+          git config user.email "claude-mention@users.noreply.github.com"
+      - name: Respond
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN || github.token }}
+          PR: ${{ github.event.issue.number }}
+          COMMENT: ${{ github.event.comment.body }}
+        run: |
+          if printf '%s' "$COMMENT" | grep -qiE '@claude[[:space:]]+review'; then
+            claude -p "Run the review pass for pull request $PR exactly as REVIEW.md says (gh pr view $PR, gh pr diff $PR): passes, Important vs Nit, nit cap, do-not-report. Post ONE comment-only review via gh api repos/{owner}/{repo}/pulls/$PR/reviews with inline comments. Never approve or merge. Non-interactive." \
+              --permission-mode default \
+              --allowedTools "Read,Grep,Glob,Bash(gh pr view *),Bash(gh pr diff *),Bash(gh api *),Bash(git log *),Bash(git diff *),Bash(git show *),Bash(cat *),Bash(ls *)" \
+              --output-format text
+          else
+            claude -p "/ai-native-sdlc:babysit-pr $PR. A person wrote this on the PR: \"$COMMENT\". Address it along with any unresolved review threads and failing checks. Non-interactive: do not ask questions; never weaken a test; if a comment is wrong, reply with the reasoning and leave it for a human." \
+              --permission-mode acceptEdits \
+              --allowedTools "Read,Write,Edit,Glob,Grep,Agent,Skill,Bash(make *),Bash(git *),Bash(gh *),Bash(ls *),Bash(cat *),Bash(find *),Bash(.venv/bin/*),Bash(grep *),Bash(head *),Bash(tail *),Bash(sleep *)" \
+              --output-format text
+          fi

@@ -34,3 +34,7 @@ Claude Code ignores `permissions.allow` in a project's `.claude/settings.json` u
 ## Closing the loop (Stage 6)
 
 `ops/detect.py` is the deterministic detector (unit tests in `tests/test_detect.py`, needs `pyyaml` as a dev dependency), `ops/bands.yaml` its config, `ops/loop.sh` the tiered response, and `.github/workflows/closing-the-loop.yml` the unattended schedule. `ops/README.md` explains the statistic and the tier mapping. Run `ops/loop.sh` by hand under your own login first; move to the schedule once the PRs it opens are worth triaging.
+
+## Review and fix loop in CI (Stage 5)
+
+`.github/workflows/claude-review.yml` runs the REVIEW.md passes on every opened PR and posts one comment-only review. `.github/workflows/claude-mention.yml` answers `@claude` comments: `@claude review` for a fresh pass, anything else runs the babysit-pr skill to address threads and failing checks. Both need `ANTHROPIC_API_KEY`; pushes and PRs made with the default Actions token do not trigger other workflows, so set `LOOP_GH_TOKEN` (a fine-grained PAT with contents and pull-requests write) for the full chain.

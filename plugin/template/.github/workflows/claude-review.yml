@@ -1,0 +1,32 @@
+# Stage 5: Deploy, AI in the PR review loop. Every PR gets the same review passes from REVIEW.md, posted
+# as ONE comment-only review with inline findings. It never approves, requests changes or merges: branch
+# protection still requires a code owner. The managed Code Review service or the claude-code-action can
+# replace this; the prompt and REVIEW.md are what matter.
+# Needs ANTHROPIC_API_KEY. Runs on opened and ready_for_review (not every push) to bound cost; comment
+# "@claude review" on the PR (see claude-mention.yml) for a fresh pass after changes.
+name: Claude review
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: Review against REVIEW.md
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          claude -p "You are the review pass for pull request $PR on this repository (gh pr view $PR, gh pr diff $PR). Apply REVIEW.md exactly: run its passes, tag each finding with its pass and with Important or Nit per REVIEW.md, cap nits as REVIEW.md says, and skip what it says not to report. Where the change has an intent/<slug>/ folder, check the diff against spec.md and plan.md. Post the result as ONE pull request review with event COMMENT via gh api repos/{owner}/{repo}/pulls/$PR/reviews, with inline comments on the exact lines and a body that gives severity counts and lists any human gates still open. Never approve, never request changes, never merge. Non-interactive: do not ask questions." \
+            --permission-mode default \
+            --allowedTools "Read,Grep,Glob,Bash(gh pr view *),Bash(gh pr diff *),Bash(gh api *),Bash(git log *),Bash(git diff *),Bash(git show *),Bash(cat *),Bash(ls *)" \
+            --output-format text

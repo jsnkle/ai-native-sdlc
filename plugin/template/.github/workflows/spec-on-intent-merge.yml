@@ -2,7 +2,10 @@
 # When an intent.md merges to main, run the spec pass non-interactively with the org skills loaded
 # and open a PR with spec.md. The product owner's first involvement becomes the review.
 # Run the spec pass by hand (/ai-native-sdlc:spec) until the format is stable, then enable this.
-# Needs ANTHROPIC_API_KEY in repository secrets and the ai-native-sdlc plugin installable in CI.
+# Needs ANTHROPIC_API_KEY in repository secrets, the ai-native-sdlc plugin installable in CI, and the
+# repository setting that lets Actions create pull requests. A PR opened with the default token does not
+# trigger CI or the review workflow on itself; set LOOP_GH_TOKEN (a fine-grained PAT with contents and
+# pull-requests write) so the spec PR gets the same checks as any other.
 name: Spec on intent merge
 on:
   push:
@@ -19,6 +22,9 @@ jobs:
         with:
           fetch-depth: 2
       - run: npm install -g @anthropic-ai/claude-code
+      - run: |
+          claude plugin marketplace add jsnkle/ai-native-sdlc
+          claude plugin install ai-native-sdlc@jsnkle --scope user
       - name: Find intents that changed and have no spec yet
         id: intents
         run: |
@@ -35,14 +41,16 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           for d in ${{ steps.intents.outputs.dirs }}; do
-            claude -p "Read $d/intent.md and produce a requirements and design spec for integrating it into our existing codebase. Apply the skills available to you so the plan conforms to our brand guidelines, security policies and UX standards. Document the spec fully as $d/spec.md, ready to hand to the engineering team. Describe clearly any areas of concern, especially where you cannot satisfy contradicting policies." \
-              --allowedTools "Read,Grep,Glob,Write($d/spec.md)" \
+            slug=$(basename "$d")
+            claude -p "/ai-native-sdlc:spec $slug. Non-interactive: do not ask questions; decide where the intent leaves a decision open, state the decision, and carry forward what only a human can answer. Write $d/spec.md and do not commit; the workflow commits." \
+              --permission-mode acceptEdits \
+              --allowedTools "Read,Grep,Glob,Skill,Write,Edit,Bash(ls *),Bash(cat *),Bash(git log *),Bash(git diff *)" \
               --output-format text
           done
       - name: Open PR
         if: steps.intents.outputs.dirs != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN || github.token }}
         run: |
           branch="spec/$(date +%Y%m%d-%H%M%S)"
           git config user.name "ai-native-sdlc bot"
