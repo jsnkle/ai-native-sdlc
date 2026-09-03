@@ -36,3 +36,4 @@ This handbook explains the process to the humans who run it. It is adapted from 
 3. Every play in [plays/](plays/README.md), in the order given by the dependency graph.
 4. [metrics.md](metrics.md), because you report on whether it is working.
 5. `../brownfield/README.md` if you are adopting this into an existing repo, `../org/` for the settings that live outside any repo.
+- [Retrospective, 2026-09-03](retrospective-2026-09-03.md) — lessons from proving the kit on a sandbox, and a play-by-play score against the article
