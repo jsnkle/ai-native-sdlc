@@ -82,7 +82,7 @@ jobs:
         env:
           COMMENT: ${{ github.event.comment.body }}
         run: |
-          if printf '%s' "$COMMENT" | grep -qiE '@claude[[:space:]]+review'; then mode=review; else mode=fix; fi
+          if printf '%s' "$COMMENT" | grep -iE '@claude[[:space:]]+review' > /dev/null; then mode=review; else mode=fix; fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Run Claude with a read-only token
         # GH_TOKEN is this job's token: read-only, so gh api can read review threads and logs but any write
@@ -146,6 +146,11 @@ jobs:
             echo "::error::PR #$PR no longer matches what the agent job recorded, so nothing is published."
             exit 1
           fi
+          default=$(gh repo view "$GITHUB_REPOSITORY" --json defaultBranchRef --jq .defaultBranchRef.name)
+          if [ -z "$default" ] || [ "$HEAD_REF" = "$default" ]; then
+            echo "::error::PR #$PR is opened from the default branch (or it could not be read), and this workflow never pushes there."
+            exit 1
+          fi
       - uses: actions/download-artifact@v4
         with:
           name: claude-mention-${{ github.run_id }}
@@ -194,15 +199,16 @@ jobs:
             fi
             # -z keeps unusual names unquoted; -i because a case-insensitive checkout folds .CLAUDE/ into .claude/.
             if git diff --no-renames --name-only -z "$HEAD_SHA" "$new" | tr '\0' '\n' \
-                | grep -qiE '(^|/)\.(github|claude)(/|$)|(^|/)\.mcp\.json$|^(docs/)?CODEOWNERS$'; then
+                | grep -iE '(^|/)\.(github|claude)(/|$)|(^|/)\.mcp\.json$|^(docs/)?CODEOWNERS$' > /dev/null; then
               echo "::error::Claude's commits change agent or CI configuration (.github/, .claude/, .mcp.json or CODEOWNERS), which this workflow never pushes. Nothing was pushed."
               exit 1
             fi
-            if git diff "$HEAD_SHA" "$new" | grep -qE 'sk-ant-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}'; then
+            # These checks read their whole input (grep without -q), so pipefail cannot turn a match into a pass.
+            if git diff "$HEAD_SHA" "$new" | grep -E 'sk-ant-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}' > /dev/null; then
               echo "::error::Claude's commits contain something shaped like a credential, so nothing was pushed."
               exit 1
             fi
-            if git log --format='%ae%n%ce' "$HEAD_SHA..$new" | grep -qvxF 'claude-mention@users.noreply.github.com'; then
+            if git log --format='%ae%n%ce' "$HEAD_SHA..$new" | grep -vxF 'claude-mention@users.noreply.github.com' > /dev/null; then
               echo "::error::A commit names an author or committer other than claude-mention, so nothing was pushed."
               exit 1
             fi
