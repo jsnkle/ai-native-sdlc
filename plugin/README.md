@@ -67,6 +67,13 @@ Both read their payload with `$(cat)`. Reading `< /dev/stdin` looks identical
 on a Mac and silently fails open on a Linux runner; the template's evals in CI
 are what caught it.
 
+**Claude Code only.** Codex can install this plugin, because it reads
+`.claude-plugin/`, and it uses the skills. But Codex hands a file edit to a hook
+as a patch, not as `file_path` and `content`, so both hooks find nothing to check
+and allow the edit without a message. We confirmed the install and the skills
+with Codex CLI 0.155.0 on 2026-09-25, and fed `protect-tests.sh` a patch-shaped
+edit that it allowed. Do not rely on these hooks under another agent.
+
 ## Non-interactive use
 
 The template's CI workflows run these skills through `claude -p`, and each

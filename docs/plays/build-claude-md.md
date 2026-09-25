@@ -24,7 +24,7 @@ A repo, Claude Code installed, and one engineer who knows the codebase well.
 
 1. Run `/init` in the repo. Claude generates a starting `CLAUDE.md` from what it finds.
 2. Cut it down to what a new joiner would need on day one. Keep the build, test, and lint commands, the conventions that matter, and the things Claude keeps getting wrong.
-3. Check it in at the repo root so the whole team shares one version and changes are reviewed like code.
+3. Check it in at the repo root so the whole team shares one version and changes are reviewed like code. If the repo already has an `AGENTS.md` for other coding agents, make `@AGENTS.md` the first line of `CLAUDE.md` and put only Claude-specific instructions below it. Claude Code reads `AGENTS.md` by itself only when there is no `CLAUDE.md` in the working directory or above it, so a new `CLAUDE.md` without that import hides the existing file from Claude.
 4. Adopt the working rule: when Claude makes a mistake twice, the correction goes into `CLAUDE.md`.
 5. Keep it under a page. Claude reads all of it at the start of a session, and anything stale is taking up context for no benefit.
 

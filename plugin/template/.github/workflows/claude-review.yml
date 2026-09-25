@@ -1,6 +1,7 @@
 # Stage 5: Deploy, AI in the PR review loop. Every PR gets the same review passes from REVIEW.md, posted
-# as ONE comment-only review with inline findings. It never approves, requests changes or merges: branch
-# protection still requires a code owner. The managed Code Review service or the claude-code-action can
+# as ONE comment-only review with inline findings. Its prompt says never to approve, request changes or
+# merge; what enforces that is branch protection requiring a code-owner review, which the Actions token
+# it runs with cannot give. The managed Code Review service or the claude-code-action can
 # replace this; the prompt and REVIEW.md are what matter.
 # Needs ANTHROPIC_API_KEY. Runs on opened and ready_for_review (not every push) to bound cost; comment
 # "@claude review" on the PR (see claude-mention.yml) for a fresh pass after changes.
