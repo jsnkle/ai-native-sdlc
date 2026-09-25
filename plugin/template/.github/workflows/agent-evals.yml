@@ -8,11 +8,17 @@ on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
+# The suite runs the PR's configuration and code with ANTHROPIC_API_KEY, so the token stays read-only and
+# the checkout keeps no credentials.
+permissions:
+  contents: read
 jobs:
   evals:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

@@ -23,7 +23,7 @@ Everything here is copied into a project and then customised. Shared institution
 | `.github/workflows/spec-on-intent-merge.yml` | Design: automated spec pass | Enable once the spec format is stable. |
 | `.github/workflows/claude-review.yml` | Deploy: PR review | One comment-only review per opened PR, from REVIEW.md. The agent runs with a read-only token; a separate job posts. |
 | `.github/workflows/claude-mention.yml` | Deploy: fix loop | `@claude` from an owner, member or collaborator runs one round of babysit-pr, or a fresh review. The agent runs with a read-only token; a separate job pushes and posts. |
-| `.github/workflows/triage-failed-build.yml` | Deploy: CI/CD integration | Your build command and log path. |
+| `.github/workflows/triage-failed-build.yml` | Deploy: CI/CD integration | Your build command and log path. The build runs with a read-only token and no secrets; a separate job triages and posts. |
 | `.github/workflows/closing-the-loop.yml` | Maintain: closing the loop | The schedule. |
 | `ops/bands.yaml`, `ops/README.md` | Maintain: closing the loop | The metric, the window and baseline, and what each tier permits. |
 | `ops/detect.py`, `ops/loop.sh`, `ops/__init__.py` | Maintain: closing the loop | Detection and the tiered response. Nothing to change unless the metric does. |
@@ -47,7 +47,7 @@ Every workflow that calls Claude needs `ANTHROPIC_API_KEY` in the repository sec
 
 - **Actions may create PRs.** Settings > Actions > General > Workflow permissions > "Allow GitHub Actions to create and approve pull requests". Without it the spec and loop workflows push a branch and then fail at `gh pr create`.
 - **`LOOP_GH_TOKEN`.** A PR opened or a push made with the default Actions token triggers no other workflow, so the spec PR gets no checks and the fix loop's pushes get no CI. A fine-grained personal access token with contents and pull-requests write, stored as `LOOP_GH_TOKEN`, gives the full chain. The three workflows that use it fall back to the default token when it is absent.
-- **Who owns `LOOP_GH_TOKEN`.** The token acts as the account that created it. If that account is a code owner, the agent can approve pull requests through `gh api`, which its allowed tools include, and only its prompt stops it. Create the token from an account that is not a code owner.
+- **Who owns `LOOP_GH_TOKEN`.** The token acts as the account that created it. The fix loop's publish job pushes with it, and `closing-the-loop` hands it to an agent. Create it from an account that is not a code owner, so nothing done with it can count as a code-owner approval.
 - **`requirements-dev.txt` and a Makefile.** `agent-evals`, `claude-mention`, `closing-the-loop` and `triage-failed-build` install `requirements-dev.txt` into a venv, and the build triage and the agent's allowed commands assume `make build`, `make test`, `make lint` and `make run`, as in `CLAUDE.md`. The template ships neither file; add them or edit those steps.
 
 Each run is a Claude call with a price. When a repo is idle, `gh workflow disable <name>` per workflow, and `gh workflow enable` to bring one back.
@@ -61,7 +61,7 @@ Both workflows split the work into two jobs, so the agent never holds a token th
 The second job runs no agent and none of the PR's code:
 
 - It posts a review only as a comment, so it can never approve or request changes.
-- It pushes Claude's commits to the PR branch without force. It refuses if the commits change `.github/` or `.claude/`, or if the branch moved while Claude worked.
+- It pushes Claude's commits to the PR branch without force. It refuses commits that touch `.github/`, `.claude/`, `.mcp.json` or `CODEOWNERS`, that name another author, that contain something shaped like a key, or that arrive after the branch moved.
 - It replies only in review threads that belong to that pull request, and it prefixes what it posts with `[claude-mention]` so nothing re-triggers the workflow.
 
 Branch protection that requires a code-owner review is still what stops a merge. Only a comment from the repository's owner, members or collaborators triggers it, and only on a pull request opened from a branch of this repository by one of them. The fix loop runs the PR's own code and configuration with the repository's secrets, so pull requests from forks or outside authors are refused; review those by hand.

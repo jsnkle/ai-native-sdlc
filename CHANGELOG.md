@@ -5,15 +5,34 @@ All notable changes to the plugin and template are recorded here. The plugin ver
 
 ## 0.2.3 - 2026-09-25
 
-**Security hardening of the review and fix loop.** The agent no longer holds a token that can write to GitHub. Before this release, planted instructions (in a review thread or in PR content that anyone can write) could reach an agent that held `gh api *` and `git *` with a write token. This hardening was predicted rather than observed; nothing like it has happened.
+**Security hardening: no agent in the template holds a token that can write to GitHub.** Before this release, planted instructions could reach an agent that held `gh api *` and `git *` with a write token. Anyone can write such instructions into a review thread or a pull request. This hardening was predicted rather than observed; nothing like it has happened. An independent review before release found gaps in the first version, and they are fixed here.
 
-- `claude-mention.yml` and `claude-review.yml` each run in two jobs:
-  - **Agent job.** Claude runs with the job's read-only token, and its checkout keeps no credentials. It returns its review, or its replies and summary, as structured output (`--json-schema`). The fix loop is limited to `make build`, `make test` and `make lint`, plain `git status`, `diff`, `log`, `show`, `add` and `commit`, and read-only `gh` commands. It no longer has `git *`, `make *`, `find *`, `.venv/bin/*`, `gh pr comment` or a write token for `gh api`.
-  - **Publish job.** It runs no agent and none of the PR's code. It posts reviews with event `COMMENT` only, falling back to a single body when GitHub rejects the inline comments. It pushes Claude's commits to the PR branch without force, and refuses if they change `.github/` or `.claude/`, if they do not build on the PR head, or if the branch moved meanwhile. It replies only to review comments on that pull request, and prefixes what it posts with `[claude-mention]`.
-- The fix loop now does one round per mention, and a per-PR `concurrency` group queues overlapping mentions.
-- `claude-review.yml` skips pull requests from forks. GitHub gives their runs no secrets, so the review could not run there anyway.
-- The `babysit-pr` skill lists review threads through GraphQL, because `gh pr view` has no `reviewThreads` field; the old instruction failed with "Unknown JSON field". The skill now acts only on comments from owners, members, collaborators or the repository's own review bot, and it can do a single round when it cannot push.
-- **Projects that copied the template earlier should replace both workflows.** They need `jq` on the runner (it is on GitHub-hosted runners) and a Claude Code version with `--json-schema`.
+- **`claude-mention.yml` and `claude-review.yml` each run in two jobs.**
+  - **Agent job.** Claude runs with the job's read-only token, from a checkout that keeps no credentials. It returns its review, or its replies and summary, as structured output (`--json-schema`).
+    - The fix loop may run `make build`, `make test` and `make lint`, and `git status`, `diff`, `log`, `show`, `add` and `commit`.
+    - It may run `gh` commands, `gh api` included. Those can only read, because of the token.
+    - It no longer has `git *`, `make *`, `find *`, `.venv/bin/*` or `gh pr comment`.
+  - **Publish job.** It runs no agent and none of the PR's code, and it re-checks the pull request instead of trusting the agent job's outputs.
+    - Reviews are posted with event `COMMENT` only, pinned to the reviewed commit. If GitHub rejects the inline comments, they are folded into a single body.
+    - Claude's commits are pushed to the PR branch without force.
+    - Replies go only to the first comment of a review thread on that pull request: at most 30, each prefixed with `[claude-mention]`. One rejected reply does not stop the rest.
+    - Nothing is published if the output or the diff contains something shaped like an API key.
+- **The push refuses commits that:**
+  - touch `.github/`, `.claude/` (at any depth or capitalisation), `.mcp.json` or a `CODEOWNERS` file, including through renames and unusual file names
+  - name an author or committer other than claude-mention
+  - do not build on the PR head
+  - arrive after the branch moved.
+- **`triage-failed-build.yml` splits the same way.** The build job runs the PR's code with a read-only token, no stored credentials and no secrets. The triage job runs none of it: Claude gets the log on stdin and no allowed tools, and the job posts the summary.
+- **`agent-evals.yml` declares a read-only token and keeps no credentials in its checkout.** Before, it inherited the repository's default permissions.
+- **The fix loop does one round per mention.** Only an `@claude` from an owner, member or collaborator joins the PR's concurrency group, so other comments cannot displace a waiting mention. A newer mention still replaces an older one that has not started.
+- **`claude-review.yml` skips pull requests from forks.** GitHub gives their runs no secrets, so the review could not run there anyway.
+- **The `babysit-pr` skill lists review threads through GraphQL.** `gh pr view` has no `reviewThreads` field, so the old instruction failed with "Unknown JSON field".
+  - It acts only on comments from owners, members, collaborators or the repository's own review bot.
+  - It can do a single round when it cannot push.
+- **What remains:**
+  - The agent job still runs the PR's code and loads its configuration (hooks, `.mcp.json`, a skill's `allowed-tools`) with `ANTHROPIC_API_KEY` in the environment. Injected instructions can therefore still reach that key through the build, and the credential scan only catches the plain form. Use a dedicated key with a spending limit.
+  - In the `issue_comment` context, that code can also reach the default branch's Actions cache, so do not restore caches that a workflow trusts.
+- **Projects that copied the template earlier should replace `claude-mention.yml`, `claude-review.yml`, `triage-failed-build.yml` and `agent-evals.yml`.** They need `jq` on the runner (it is on GitHub-hosted runners) and a Claude Code version with `--json-schema`.
 
 ## 0.2.2 - 2026-09-25
 
