@@ -54,7 +54,7 @@ Each run is a Claude call with a price. When a repo is idle, `gh workflow disabl
 
 ## Review and fix loop in CI (Stage 5)
 
-`claude-review.yml` runs the REVIEW.md passes on every opened PR and posts one comment-only review. Its prompt says it never approves, requests changes or merges; what enforces that is branch protection requiring a code-owner review. `claude-mention.yml` answers `@claude` comments: `@claude review` for a fresh pass, anything else runs the babysit-pr skill to address threads and failing checks. Only comments from the repository's owner, members or collaborators trigger it, so a stranger on a public repo cannot spend credits or run code.
+`claude-review.yml` runs the REVIEW.md passes on every opened PR and posts one comment-only review. Its prompt says it never approves, requests changes or merges; what enforces that is branch protection requiring a code-owner review. `claude-mention.yml` answers `@claude` comments: `@claude review` for a fresh pass, anything else runs the babysit-pr skill to address threads and failing checks. Only a comment from the repository's owner, members or collaborators triggers it, and only on a pull request opened from a branch of this repository by one of them. The fix loop runs the PR's own code and configuration with the repository's secrets, so pull requests from forks or outside authors are refused; review those by hand.
 
 ## Closing the loop (Stage 6)
 

@@ -3,9 +3,15 @@
 All notable changes to the plugin and template are recorded here. The plugin version in
 `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` moves together.
 
-## Unreleased
+## 0.2.2 - 2026-09-25
 
-Documentation corrections from [the 2026-09-25 retrospective](docs/retrospective-2026-09-25.md). No skill, hook or workflow behaviour changes.
+**Security.** `claude-mention.yml` ran the fix loop on any pull request that an owner, member or collaborator mentioned `@claude` on, including pull requests from forks. The loop checks out the PR and runs with `ANTHROPIC_API_KEY` and `LOOP_GH_TOKEN`, and the PR's own hooks, Makefile and venv run there. That means an outside contributor's pull request could run code with those secrets. It was found by review on 2026-09-25. The kit's sandbox had the workflow disabled.
+
+- `claude-mention.yml` now handles only pull requests opened from a branch of this repository by an owner, member or collaborator. It refuses the rest before checking anything out.
+- `CODEOWNERS` assigns `.github/` to the tech lead, so the workflows that hold secrets change only with the same review as `.claude/`.
+- **Projects that copied the template before 0.2.2 should replace their `.github/workflows/claude-mention.yml` and add the `.github/` line to `CODEOWNERS`.** Template files are copied when a project adopts the kit, so updating the plugin does not change them.
+
+Documentation corrections from [the 2026-09-25 retrospective](docs/retrospective-2026-09-25.md):
 
 - Approvals: the agent's "never approves or merges" is a prompt. The docs, CODEOWNERS and workflow comments now say it holds only when branch protection requires a code-owner review and no token the agent uses belongs to a code owner. The template README says to create `LOOP_GH_TOKEN` from an account that is not a code owner.
 - Template README lists `requirements-dev.txt` and the Makefile targets the workflows assume; the template ships neither.

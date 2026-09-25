@@ -4,8 +4,11 @@
 # approve or merge; the separation of duties below is what enforces that. The claude-code-action does the
 # same job with more polish; this is the dependency-free form.
 # Needs ANTHROPIC_API_KEY, the plugin installable in CI, and for pushes to trigger CI, LOOP_GH_TOKEN.
-# Who may trigger it: only comments from the repository's owner, members or collaborators, never from
-# a bot, so a stranger on a public repo cannot spend credits or run code by writing "@claude".
+# Who may trigger it: a comment from the repository's owner, members or collaborators (never a bot), on a
+# pull request opened from a branch of this repository by an owner, member or collaborator. Once the PR is
+# checked out, its own files run with this job's secrets: its hooks load in claude -p, and the agent may run
+# its Makefile and venv. So pull requests from forks or from outside authors are refused even when a
+# maintainer asks; review those by hand.
 # Separation of duties: the agent cannot unlock a merge while branch protection requires a code-owner
 # review and the token it runs with is not a code owner's. The Actions token never is. LOOP_GH_TOKEN acts
 # as the account that created it, so create it from an account that is not a code owner.
@@ -23,10 +26,23 @@ jobs:
       github.event.issue.pull_request
       && contains(github.event.comment.body, '@claude')
       && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+      && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
       && github.event.comment.user.type != 'Bot'
       && !startsWith(github.event.comment.body, '[claude-mention]')
     runs-on: ubuntu-latest
     steps:
+      - name: Refuse pull requests from forks
+        # The job condition checks who wrote the PR; this checks where its code lives. It runs first, before
+        # the checkout stores LOOP_GH_TOKEN and before any of the PR's code is on the runner.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number }}
+        run: |
+          cross=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json isCrossRepository --jq .isCrossRepository)
+          if [ "$cross" != "false" ]; then
+            echo "::error::PR #$PR is from a fork, or its origin could not be read. This workflow runs a PR's own code with the repository's secrets, so it only handles PRs opened from a branch of this repository."
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
