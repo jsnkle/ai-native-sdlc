@@ -23,7 +23,7 @@ Everything here is copied into a project and then customised. Shared institution
 | `.github/workflows/spec-on-intent-merge.yml` | Design: automated spec pass | Enable once the spec format is stable. |
 | `.github/workflows/claude-review.yml` | Deploy: PR review | One comment-only review per opened PR, from REVIEW.md. The agent runs with a read-only token; a separate job posts. |
 | `.github/workflows/claude-mention.yml` | Deploy: fix loop | `@claude` from an owner, member or collaborator runs one round of babysit-pr, or a fresh review. The agent runs with a read-only token; a separate job pushes and posts. |
-| `.github/workflows/triage-failed-build.yml` | Deploy: CI/CD integration | Your build command and log path. The build runs with a read-only token and no secrets; a separate job triages and posts. |
+| `.github/workflows/triage-failed-build.yml` | Deploy: CI/CD integration | Your build command and log path. The build runs with a read-only token and no secrets; a separate job triages with `claude --bare` and posts. |
 | `.github/workflows/closing-the-loop.yml` | Maintain: closing the loop | The schedule. |
 | `ops/bands.yaml`, `ops/README.md` | Maintain: closing the loop | The metric, the window and baseline, and what each tier permits. |
 | `ops/detect.py`, `ops/loop.sh`, `ops/__init__.py` | Maintain: closing the loop | Detection and the tiered response. Nothing to change unless the metric does. |
