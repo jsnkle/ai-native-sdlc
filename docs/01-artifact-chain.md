@@ -85,7 +85,7 @@ From build onward the artifact is code and its records: the diff and its tests i
 |---|---|
 | **What it is** | The pull request, the ranked findings from the agentic review passes defined in `REVIEW.md`, the fixes pushed in response, and the human approval. |
 | **Who writes it** | Claude reviews against `REVIEW.md`; Claude addresses comments when tagged; `/ai-native-sdlc:babysit-pr` sweeps unresolved comments and failing checks until the PR is green. |
-| **Who approves it** | A code owner, through branch protection. Findings never approve or block on their own. The agent that wrote the code has no route to approve it. |
+| **Who approves it** | A code owner, through branch protection. Findings never approve or block on their own. The agent is told never to approve; that holds mechanically only when branch protection requires a code-owner review and no token the agent runs with belongs to a code owner. |
 | **What commits it** | The merge. |
 | **What it fires** | A merged PR triggers the pipeline. The production gate hook blocks the deploy until a named release manager authorizes it. |
 

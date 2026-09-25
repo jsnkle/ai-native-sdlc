@@ -24,7 +24,7 @@ Claude Code, and the hooks configuration in the repo's `.claude/settings.json` o
 
 1. List what must never happen during implementation: edits to generated classes, edits to a frozen package, a credential landing in a file, an unformatted file being saved.
 2. Write each as a hook script that reads the tool input from stdin, decides, and exits 0 to allow or 2 to block with a reason on stderr. A block should explain itself: the reason and the route to approval appear in Claude's output.
-3. Back any skill whose policy must hold without exception with a hook. The skill applies the policy; the hook makes it impossible to skip.
+3. Back any skill whose policy must hold without exception with a hook. The skill applies the policy; the hook blocks the action when the skill is skipped. A hook enforces only what it can read: one that cannot parse its input allows the action, silently. Test each hook on every machine and runner it runs on, and treat the hooks as Claude Code only, because another agent can send the same edit in a shape they do not recognise.
 4. Keep hooks fast and scoped to the file that changed. A hook runs on each action that matches it. Heavier checks like the full test suite belong at the commit or the PR.
 5. Do not put approval prompts here. A hook that asks a human belongs with the gates in [deploy-approval-gates.md](deploy-approval-gates.md); an approval prompt during build puts a person back on the critical path of every parallel session.
 

@@ -1,4 +1,5 @@
-# Code owners approve PRs via branch protection. The agent that wrote the code cannot approve it.
+# Code owners approve PRs via branch protection. The agent cannot approve for them as long as branch protection
+# requires a code-owner review and no token it runs with (the Actions token, LOOP_GH_TOKEN) belongs to a code owner.
 # Replace the handles. Keep the agent configuration owned by the tech lead so changes to it are reviewed like code.
 *                     @{{PROJECT_NAME}}-maintainers
 CLAUDE.md             @{{PROJECT_NAME}}-tech-lead

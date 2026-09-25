@@ -1,12 +1,14 @@
 # Stage 5: Deploy, the fix loop. A reviewer or author writes "@claude ..." on a PR and Claude addresses it:
 # "@claude review" runs a fresh review pass; anything else runs the babysit-pr skill, which addresses
-# unresolved comments and failing checks, pushes fixes, and replies in the threads. It never approves or
-# merges. The claude-code-action does the same job with more polish; this is the dependency-free form.
+# unresolved comments and failing checks, pushes fixes, and replies in the threads. Its prompt says never to
+# approve or merge; the separation of duties below is what enforces that. The claude-code-action does the
+# same job with more polish; this is the dependency-free form.
 # Needs ANTHROPIC_API_KEY, the plugin installable in CI, and for pushes to trigger CI, LOOP_GH_TOKEN.
 # Who may trigger it: only comments from the repository's owner, members or collaborators, never from
 # a bot, so a stranger on a public repo cannot spend credits or run code by writing "@claude".
-# Separation of duties: the agent cannot unlock a merge. Branch protection requires a code-owner
-# review, and neither the Actions token nor a PAT scoped to this workflow is a code owner.
+# Separation of duties: the agent cannot unlock a merge while branch protection requires a code-owner
+# review and the token it runs with is not a code owner's. The Actions token never is. LOOP_GH_TOKEN acts
+# as the account that created it, so create it from an account that is not a code owner.
 name: Claude mention
 on:
   issue_comment:

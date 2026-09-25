@@ -47,12 +47,14 @@ Every workflow that calls Claude needs `ANTHROPIC_API_KEY` in the repository sec
 
 - **Actions may create PRs.** Settings > Actions > General > Workflow permissions > "Allow GitHub Actions to create and approve pull requests". Without it the spec and loop workflows push a branch and then fail at `gh pr create`.
 - **`LOOP_GH_TOKEN`.** A PR opened or a push made with the default Actions token triggers no other workflow, so the spec PR gets no checks and the fix loop's pushes get no CI. A fine-grained personal access token with contents and pull-requests write, stored as `LOOP_GH_TOKEN`, gives the full chain. The three workflows that use it fall back to the default token when it is absent.
+- **Who owns `LOOP_GH_TOKEN`.** The token acts as the account that created it. If that account is a code owner, the agent can approve pull requests through `gh api`, which its allowed tools include, and only its prompt stops it. Create the token from an account that is not a code owner.
+- **`requirements-dev.txt` and a Makefile.** `agent-evals`, `claude-mention`, `closing-the-loop` and `triage-failed-build` install `requirements-dev.txt` into a venv, and the build triage and the agent's allowed commands assume `make build`, `make test`, `make lint` and `make run`, as in `CLAUDE.md`. The template ships neither file; add them or edit those steps.
 
 Each run is a Claude call with a price. When a repo is idle, `gh workflow disable <name>` per workflow, and `gh workflow enable` to bring one back.
 
 ## Review and fix loop in CI (Stage 5)
 
-`claude-review.yml` runs the REVIEW.md passes on every opened PR and posts one comment-only review. It never approves, requests changes or merges; branch protection still requires a code owner. `claude-mention.yml` answers `@claude` comments: `@claude review` for a fresh pass, anything else runs the babysit-pr skill to address threads and failing checks. Only comments from the repository's owner, members or collaborators trigger it, so a stranger on a public repo cannot spend credits or run code.
+`claude-review.yml` runs the REVIEW.md passes on every opened PR and posts one comment-only review. Its prompt says it never approves, requests changes or merges; what enforces that is branch protection requiring a code-owner review. `claude-mention.yml` answers `@claude` comments: `@claude review` for a fresh pass, anything else runs the babysit-pr skill to address threads and failing checks. Only comments from the repository's owner, members or collaborators trigger it, so a stranger on a public repo cannot spend credits or run code.
 
 ## Closing the loop (Stage 6)
 
