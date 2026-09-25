@@ -23,8 +23,10 @@ on:
   issue_comment:
     types: [created]
 permissions: {}
+# One run per PR at a time. Only a trusted @claude mention joins the PR's group, so other comments cannot
+# replace a mention that is waiting; a newer mention still replaces an older one that has not started.
 concurrency:
-  group: claude-mention-${{ github.event.issue.number }}
+  group: ${{ contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) && format('claude-mention-{0}', github.event.issue.number) || github.run_id }}
   cancel-in-progress: false
 jobs:
   agent:
@@ -41,6 +43,7 @@ jobs:
       pull-requests: read
       actions: read
       checks: read
+      statuses: read
     outputs:
       mode: ${{ steps.mode.outputs.mode }}
       head_ref: ${{ steps.pr.outputs.head_ref }}
@@ -106,7 +109,7 @@ jobs:
             schema='{"type":"object","properties":{"summary":{"type":"string"},"replies":{"type":"array","items":{"type":"object","properties":{"comment_id":{"type":"integer"},"body":{"type":"string"}},"required":["comment_id","body"]}}},"required":["summary","replies"]}'
             claude -p "/ai-native-sdlc:babysit-pr $PR. A person wrote this on the PR: \"$COMMENT\". This is one round in CI with a read-only GitHub token: address the unresolved review threads and failing checks, run make build, make test and make lint, and commit locally with messages naming what each commit addresses. Do not push and do not post; the workflow pushes your commits and posts your replies. Return structured output: replies, each with the databaseId of the review comment you answer as comment_id and a body saying what changed or, if the comment is wrong, why nothing did; and a short summary of the round. Never weaken a test. $untrusted" \
               --permission-mode acceptEdits \
-              --allowedTools "Read,Write,Edit,Glob,Grep,Agent,Skill,Bash(make build),Bash(make test),Bash(make lint),Bash(git status),Bash(git diff),Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git add *),Bash(git commit *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr checks *),Bash(gh run view *),Bash(gh run list *),Bash(gh repo view *),Bash(gh api *),Bash(ls *),Bash(cat *),Bash(grep *),Bash(head *),Bash(tail *)" \
+              --allowedTools "Read,Write,Edit,Glob,Grep,Agent,Skill,Bash(make build),Bash(make test),Bash(make lint),Bash(git status),Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git add *),Bash(git commit *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr checks *),Bash(gh run view *),Bash(gh run list *),Bash(gh repo view *),Bash(gh api *),Bash(ls *),Bash(cat *),Bash(grep *),Bash(head *),Bash(tail *)" \
               --output-format json --json-schema "$schema" > "$out/result.json"
           fi
           jq -e '.structured_output' "$out/result.json" > "$out/output.json"
@@ -133,20 +136,37 @@ jobs:
       HEAD_REF: ${{ needs.agent.outputs.head_ref }}
       HEAD_SHA: ${{ needs.agent.outputs.head_sha }}
     steps:
+      - name: Check the PR again
+        # The agent job ran the PR's code, so its outputs are re-checked here rather than trusted.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          info=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json isCrossRepository,headRefName)
+          if [ "$(jq -r .isCrossRepository <<<"$info")" != "false" ] || [ "$(jq -r .headRefName <<<"$info")" != "$HEAD_REF" ]; then
+            echo "::error::PR #$PR no longer matches what the agent job recorded, so nothing is published."
+            exit 1
+          fi
       - uses: actions/download-artifact@v4
         with:
           name: claude-mention-${{ github.run_id }}
           path: ${{ runner.temp }}/out
+      - name: Refuse output that contains a credential
+        # A backstop: planted instructions could try to leak the Anthropic key through Claude's output.
+        run: |
+          if grep -qE 'sk-ant-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}' "$RUNNER_TEMP/out/output.json"; then
+            echo "::error::Claude's output contains something shaped like a credential, so nothing is published."
+            exit 1
+          fi
       - name: Post the review as a comment-only review
         if: needs.agent.outputs.mode == 'review'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           out="$RUNNER_TEMP/out"
-          jq '{event: "COMMENT", body: .body, comments: [.comments[] | {path, line, side: "RIGHT", body}]}' "$out/output.json" > "$out/review.json"
+          jq --arg sha "$HEAD_SHA" '{commit_id: $sha, event: "COMMENT", body: .body, comments: [.comments[] | {path, line, side: "RIGHT", body}]}' "$out/output.json" > "$out/review.json"
           if ! gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" --input "$out/review.json" > /dev/null; then
             echo "::warning::GitHub rejected the inline comments (a line outside the diff?), so they are posted in the review body."
-            jq '{event: "COMMENT", body: (.body + "\n\n" + ([.comments[] | "- `\(.path):\(.line)` \(.body)"] | join("\n")))}' "$out/review.json" \
+            jq '{commit_id, event: "COMMENT", body: (.body + "\n\n" + ([.comments[] | "- `\(.path):\(.line)` \(.body)"] | join("\n")))}' "$out/review.json" \
               | gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" --input - > /dev/null
           fi
       - uses: actions/checkout@v4
@@ -172,21 +192,35 @@ jobs:
               echo "::error::Claude's commits do not build on the PR head, so nothing was pushed."
               exit 1
             fi
-            if git diff --no-renames --name-only "$HEAD_SHA" "$new" | grep -qE '^\.(github|claude)/'; then
-              echo "::error::Claude's commits change .github/ or .claude/, which this workflow never pushes. Nothing was pushed."
+            # -z keeps unusual names unquoted; -i because a case-insensitive checkout folds .CLAUDE/ into .claude/.
+            if git diff --no-renames --name-only -z "$HEAD_SHA" "$new" | tr '\0' '\n' \
+                | grep -qiE '(^|/)\.(github|claude)(/|$)|(^|/)\.mcp\.json$|^(docs/)?CODEOWNERS$'; then
+              echo "::error::Claude's commits change agent or CI configuration (.github/, .claude/, .mcp.json or CODEOWNERS), which this workflow never pushes. Nothing was pushed."
+              exit 1
+            fi
+            if git diff "$HEAD_SHA" "$new" | grep -qE 'sk-ant-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}'; then
+              echo "::error::Claude's commits contain something shaped like a credential, so nothing was pushed."
+              exit 1
+            fi
+            if git log --format='%ae%n%ce' "$HEAD_SHA..$new" | grep -qvxF 'claude-mention@users.noreply.github.com'; then
+              echo "::error::A commit names an author or committer other than claude-mention, so nothing was pushed."
               exit 1
             fi
             git push origin "$new:refs/heads/$HEAD_REF"
           fi
-          ids=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/comments" --paginate --jq '.[].id')
-          jq -c '.replies[]' "$out/output.json" | while read -r reply; do
-            id=$(jq -r '.comment_id' <<<"$reply")
-            if ! grep -qxF "$id" <<<"$ids"; then
-              echo "::warning::Skipped a reply to $id, which is not a review comment on this PR."
-              continue
-            fi
-            jq -n --arg b "[claude-mention] $(jq -r '.body' <<<"$reply")" '{body: $b}' \
-              | gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/comments/$id/replies" --input - > /dev/null
-          done
+          # "id root" per review comment on this PR; GitHub accepts replies only on a thread's first comment.
+          roots=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/comments" --paginate --jq '.[] | "\(.id) \(.in_reply_to_id // .id)"')
+          jq -c '[.replies[] | select(.comment_id | type == "number")] | unique_by(.comment_id) | .[:30] | .[]' "$out/output.json" \
+            | while read -r reply; do
+              id=$(jq -r '.comment_id' <<<"$reply")
+              root=$(awk -v id="$id" '$1 == id { print $2 }' <<<"$roots")
+              if [ -z "$root" ]; then
+                echo "::warning::Skipped a reply to $id, which is not a review comment on this PR."
+                continue
+              fi
+              jq -n --arg b "[claude-mention] $(jq -r '.body' <<<"$reply")" '{body: $b}' \
+                | gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/comments/$root/replies" --input - > /dev/null \
+                || echo "::warning::GitHub rejected the reply to comment $root."
+            done
           jq -r '.summary' "$out/output.json" | sed '1s/^/[claude-mention] /' \
             | gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file -

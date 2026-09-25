@@ -56,15 +56,23 @@ jobs:
         with:
           name: claude-review-${{ github.run_id }}
           path: ${{ runner.temp }}/out
+      - name: Refuse output that contains a credential
+        # A backstop: planted instructions could try to leak the Anthropic key through Claude's output.
+        run: |
+          if grep -qE 'sk-ant-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}' "$RUNNER_TEMP/out/output.json"; then
+            echo "::error::Claude's output contains something shaped like a credential, so nothing is published."
+            exit 1
+          fi
       - name: Post the review as a comment-only review
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           out="$RUNNER_TEMP/out"
-          jq '{event: "COMMENT", body: .body, comments: [.comments[] | {path, line, side: "RIGHT", body}]}' "$out/output.json" > "$out/review.json"
+          jq --arg sha "$HEAD_SHA" '{commit_id: $sha, event: "COMMENT", body: .body, comments: [.comments[] | {path, line, side: "RIGHT", body}]}' "$out/output.json" > "$out/review.json"
           if ! gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" --input "$out/review.json" > /dev/null; then
             echo "::warning::GitHub rejected the inline comments (a line outside the diff?), so they are posted in the review body."
-            jq '{event: "COMMENT", body: (.body + "\n\n" + ([.comments[] | "- `\(.path):\(.line)` \(.body)"] | join("\n")))}' "$out/review.json" \
+            jq '{commit_id, event: "COMMENT", body: (.body + "\n\n" + ([.comments[] | "- `\(.path):\(.line)` \(.body)"] | join("\n")))}' "$out/review.json" \
               | gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" --input - > /dev/null
           fi
