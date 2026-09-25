@@ -21,8 +21,8 @@ Everything here is copied into a project and then customised. Shared institution
 | `evals/run.sh`, `evals/check.sh`, `evals/README.md` | Test: continuous evals | The runner (local and CI) and the per-case checker. Nothing to change. |
 | `evals/example-add-endpoint.json` | Test: continuous evals | One example case. Replace with 20 to 50 cases from your own incidents. |
 | `.github/workflows/spec-on-intent-merge.yml` | Design: automated spec pass | Enable once the spec format is stable. |
-| `.github/workflows/claude-review.yml` | Deploy: PR review | One comment-only review per opened PR, from REVIEW.md. |
-| `.github/workflows/claude-mention.yml` | Deploy: fix loop | `@claude` from an owner, member or collaborator runs babysit-pr, or a fresh review. |
+| `.github/workflows/claude-review.yml` | Deploy: PR review | One comment-only review per opened PR, from REVIEW.md. The agent runs with a read-only token; a separate job posts. |
+| `.github/workflows/claude-mention.yml` | Deploy: fix loop | `@claude` from an owner, member or collaborator runs one round of babysit-pr, or a fresh review. The agent runs with a read-only token; a separate job pushes and posts. |
 | `.github/workflows/triage-failed-build.yml` | Deploy: CI/CD integration | Your build command and log path. |
 | `.github/workflows/closing-the-loop.yml` | Maintain: closing the loop | The schedule. |
 | `ops/bands.yaml`, `ops/README.md` | Maintain: closing the loop | The metric, the window and baseline, and what each tier permits. |
@@ -54,7 +54,17 @@ Each run is a Claude call with a price. When a repo is idle, `gh workflow disabl
 
 ## Review and fix loop in CI (Stage 5)
 
-`claude-review.yml` runs the REVIEW.md passes on every opened PR and posts one comment-only review. Its prompt says it never approves, requests changes or merges; what enforces that is branch protection requiring a code-owner review. `claude-mention.yml` answers `@claude` comments: `@claude review` for a fresh pass, anything else runs the babysit-pr skill to address threads and failing checks. Only a comment from the repository's owner, members or collaborators triggers it, and only on a pull request opened from a branch of this repository by one of them. The fix loop runs the PR's own code and configuration with the repository's secrets, so pull requests from forks or outside authors are refused; review those by hand.
+`claude-review.yml` runs the REVIEW.md passes on every opened PR and posts one comment-only review. `claude-mention.yml` answers `@claude` comments: `@claude review` for a fresh pass, anything else runs one round of the babysit-pr skill to address threads and failing checks.
+
+Both workflows split the work into two jobs, so the agent never holds a token that can write to GitHub. The agent job runs Claude with the job's read-only token. It can read threads and logs, and edit, test and commit locally, and it returns its review, or its replies and summary, as structured output.
+
+The second job runs no agent and none of the PR's code:
+
+- It posts a review only as a comment, so it can never approve or request changes.
+- It pushes Claude's commits to the PR branch without force. It refuses if the commits change `.github/` or `.claude/`, or if the branch moved while Claude worked.
+- It replies only in review threads that belong to that pull request, and it prefixes what it posts with `[claude-mention]` so nothing re-triggers the workflow.
+
+Branch protection that requires a code-owner review is still what stops a merge. Only a comment from the repository's owner, members or collaborators triggers it, and only on a pull request opened from a branch of this repository by one of them. The fix loop runs the PR's own code and configuration with the repository's secrets, so pull requests from forks or outside authors are refused; review those by hand.
 
 ## Closing the loop (Stage 6)
 

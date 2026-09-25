@@ -3,6 +3,18 @@
 All notable changes to the plugin and template are recorded here. The plugin version in
 `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` moves together.
 
+## 0.2.3 - 2026-09-25
+
+**Security hardening of the review and fix loop.** The agent no longer holds a token that can write to GitHub. Before this release, planted instructions (in a review thread or in PR content that anyone can write) could reach an agent that held `gh api *` and `git *` with a write token. This hardening was predicted rather than observed; nothing like it has happened.
+
+- `claude-mention.yml` and `claude-review.yml` each run in two jobs:
+  - **Agent job.** Claude runs with the job's read-only token, and its checkout keeps no credentials. It returns its review, or its replies and summary, as structured output (`--json-schema`). The fix loop is limited to `make build`, `make test` and `make lint`, plain `git status`, `diff`, `log`, `show`, `add` and `commit`, and read-only `gh` commands. It no longer has `git *`, `make *`, `find *`, `.venv/bin/*`, `gh pr comment` or a write token for `gh api`.
+  - **Publish job.** It runs no agent and none of the PR's code. It posts reviews with event `COMMENT` only, falling back to a single body when GitHub rejects the inline comments. It pushes Claude's commits to the PR branch without force, and refuses if they change `.github/` or `.claude/`, if they do not build on the PR head, or if the branch moved meanwhile. It replies only to review comments on that pull request, and prefixes what it posts with `[claude-mention]`.
+- The fix loop now does one round per mention, and a per-PR `concurrency` group queues overlapping mentions.
+- `claude-review.yml` skips pull requests from forks. GitHub gives their runs no secrets, so the review could not run there anyway.
+- The `babysit-pr` skill lists review threads through GraphQL, because `gh pr view` has no `reviewThreads` field; the old instruction failed with "Unknown JSON field". The skill now acts only on comments from owners, members, collaborators or the repository's own review bot, and it can do a single round when it cannot push.
+- **Projects that copied the template earlier should replace both workflows.** They need `jq` on the runner (it is on GitHub-hosted runners) and a Claude Code version with `--json-schema`.
+
 ## 0.2.2 - 2026-09-25
 
 **Security.** `claude-mention.yml` ran the fix loop on any pull request that an owner, member or collaborator mentioned `@claude` on, including pull requests from forks. The loop checks out the PR and runs with `ANTHROPIC_API_KEY` and `LOOP_GH_TOKEN`, and the PR's own hooks, Makefile and venv run there. That means an outside contributor's pull request could run code with those secrets. It was found by review on 2026-09-25. The kit's sandbox had the workflow disabled.
