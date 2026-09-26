@@ -9,9 +9,18 @@ list="$root/.claude/protected-paths"
 # Read the hook payload with $(cat), never '< /dev/stdin': on Linux, opening /dev/stdin when fd 0 is a socket
 # fails, jq sees nothing, and the hook silently allows the action. Found by the sandbox's evals in CI.
 input=$(cat)
-path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
-[ -n "$path" ] || exit 0
-rel="${path#$root/}"
+
+# Fail closed: an edit this hook cannot read is blocked, never waved through.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Blocked: protected-paths.sh needs jq to read which file this edit changes, and jq is not installed. Tell the engineer: install jq (brew install jq, or apt-get install jq), then retry." >&2
+  exit 2
+fi
+path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // .tool_input.path // empty' 2>/dev/null)
+if [ -z "$path" ]; then
+  echo "Blocked: protected-paths.sh could not read which file this edit changes, so it cannot check it against .claude/protected-paths. Tell the engineer which tool made the edit." >&2
+  exit 2
+fi
+rel="${path#"$root"/}"
 
 # In [[ ... == pattern ]] a "*" matches across "/" so "**" needs no globstar (bash 3.2 on macOS lacks it).
 while IFS= read -r pattern || [ -n "$pattern" ]; do

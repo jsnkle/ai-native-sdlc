@@ -16,8 +16,25 @@ if [ "${CLAUDE_FIX_TASK:-0}" != "1" ] && [ ! -e "$root/.claude/fix-task" ]; then
 fi
 
 input=$(cat)
-path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null)
-[ -z "$path" ] && exit 0
+
+# Fail closed: during a fix, an edit this hook cannot read is blocked, never waved through.
+if ! command -v jq >/dev/null 2>&1; then
+  cat >&2 <<MSG
+Blocked: a fix task is active and protect-tests.sh needs jq to tell whether this edit
+touches a test, but jq is not installed. Tell the engineer: install jq
+(brew install jq, or apt-get install jq), then retry.
+MSG
+  exit 2
+fi
+path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // .tool_input.path // empty' 2>/dev/null)
+if [ -z "$path" ]; then
+  cat >&2 <<MSG
+Blocked: a fix task is active and protect-tests.sh could not read which file this edit
+changes, so it cannot tell whether it is a test. Tell the engineer; they can lift the
+guard with 'rm $root/.claude/fix-task' (or unset CLAUDE_FIX_TASK).
+MSG
+  exit 2
+fi
 
 base=$(basename "$path")
 is_test=0

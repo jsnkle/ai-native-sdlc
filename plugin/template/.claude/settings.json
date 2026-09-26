@@ -34,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/production-gate.sh"
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/production-gate.sh\""
           }
         ]
       },
@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/protected-paths.sh"
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/protected-paths.sh\""
           }
         ]
       }
@@ -54,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/format-on-edit.sh"
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/format-on-edit.sh\""
           }
         ]
       }
