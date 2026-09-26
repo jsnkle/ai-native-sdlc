@@ -52,8 +52,7 @@ trap 'git switch -q "$start" 2>/dev/null || git switch -q --detach "$start" 2>/d
 mkdir -p "$(dirname "$path")"
 cp "$src" "$path"
 git add -- "$path"
-# Hooks off. That does not make a .git the agent could write safe (its config can still run commands),
-# which is why the workflow runs this in a job with a fresh checkout. See ops/README.md on running by hand.
+# Hooks off.
 git -c core.hooksPath=/dev/null commit -q -m "intent: $metric breached its control band ($ts)" -- "$path"
 git push -q -u origin "$branch"
 gh pr create --title "intent: $metric breached 3-sigma band ($ts)" --body-file - <<PR

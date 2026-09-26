@@ -48,21 +48,9 @@ ops/propose.sh REPORT DIR        # open the PR for a staged proposal (REPORT: de
 ```
 
 At tier 3 the agent writes the intent and commits nothing, and `propose.sh` checks the file before
-it commits it. That separation holds in the workflow, where the two run in separate jobs: the agent's
+it commits it. In the workflow the two run in separate jobs: the agent's
 job has a read-only token and no stored credentials, and the propose job runs no agent, detects again
 from main and alone holds a token that can push.
-
-**Run by hand, it does not hold.** At tier 2 or 3 the agent reads CI logs that anyone who opens a pull
-request can write into, and it can write to your working copy: at tier 3 with `Write`, including
-`ops/propose.sh`, and at both tiers through `git log --output`, including `.git/config`, which the next
-git command reads and which can name commands for git to run. The loop then runs git and `propose.sh`
-under your own gh and git credentials, and so do you the next time you use the clone. A run by hand
-that reaches tier 2 or 3 can therefore act on instructions planted in a CI log, under your account, and
-a throwaway clone does not help because the credentials are not in the clone. The kit is only for private
-repositories whose contributors are all trusted (see the kit's README), where the CI logs come from your
-team's code; that is the trust a run by hand relies on. For more distance, run it in a container or VM
-that holds no credentials of yours beyond a read-only `GH_TOKEN` and a spend-capped Anthropic key, with
-`--no-propose` (a read-only token cannot push anyway).
 
 Locally it runs under your Claude Code login. Unattended it runs from a scheduled workflow
 with `ANTHROPIC_API_KEY` in repository secrets (a Console API key, which is billed separately from
