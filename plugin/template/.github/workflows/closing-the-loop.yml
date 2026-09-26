@@ -1,3 +1,5 @@
+# PRIVATE REPOSITORIES WITH TRUSTED CONTRIBUTORS ONLY. Not for public or open-source repositories: see
+# the ai-native-sdlc README (github.com/jsnkle/ai-native-sdlc). The agent below reads what contributors write.
 # Closing the loop, unattended (Stage 6: Maintain).
 # Runs ops/loop.sh on a schedule. Detection is deterministic; Claude is invoked only on a breach,
 # with the tools ops/bands.yaml allows for that tier. Anything it proposes arrives as a PR through

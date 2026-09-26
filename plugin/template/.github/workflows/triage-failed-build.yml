@@ -1,3 +1,5 @@
+# PRIVATE REPOSITORIES WITH TRUSTED CONTRIBUTORS ONLY. Not for public or open-source repositories: see
+# the ai-native-sdlc README (github.com/jsnkle/ai-native-sdlc). The agent below reads what contributors write.
 # Stage 5: Deploy, CI/CD integration. A read-only judgment step: when the build fails, Claude reads the log
 # and posts a three-line triage to the PR thread.
 # Two jobs. build runs the PR's code with a read-only token, no stored credentials and no secrets. triage

@@ -5,6 +5,16 @@ A working kit for running the software development lifecycle the way Anthropic's
 every stage ends by committing an artifact the next stage reads, agents do the work between
 the gates, and humans decide at the gates.
 
+> **Private repositories and trusted teams only.** This kit is for a private repository where
+> everyone who can push a branch, open a pull request or comment on one is a trusted member of your
+> team. It is not for public repositories, and not for open-source projects that take contributions
+> from people you do not know. Its agents read pull requests, review comments and CI logs, and CI runs
+> the code in those pull requests with your API key in reach, so anyone who can write them can try to
+> steer an agent. The fix loop refuses forks and outside authors, GitHub gives fork pull requests no
+> secrets, and no agent job holds a token that can write to GitHub, but those guards limit the damage
+> of a mistake. They do not make the kit safe for contributors you do not trust. Closing the loop, for
+> one, reads the CI logs of every pull request.
+
 The playbook's core idea is a loop rather than a line:
 
 ```
@@ -124,7 +134,7 @@ idle, as [docs/02-adoption-order.md](docs/02-adoption-order.md) describes.
 
 ## Status
 
-Version 0.2.4. The kit is complete and has been exercised end to end on a sandbox: by hand,
+Version 0.2.5. The kit is complete and has been exercised end to end on a sandbox: by hand,
 then codified, then triggered from CI. The policy skill, the eval cases and the monitoring bands
 are deliberately examples that each organisation replaces with its own. Known gaps are listed
 per play in the [retrospective scorecard](docs/retrospective-2026-09-03.md#scorecard-against-the-article).
