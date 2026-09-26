@@ -6,30 +6,44 @@
 # repository setting that lets Actions create pull requests. A PR opened with the default token does not
 # trigger CI or the review workflow on itself; set LOOP_GH_TOKEN (a fine-grained PAT with contents and
 # pull-requests write) so the spec PR gets the same checks as any other.
+#
+# Two jobs, so the agent never holds a token that can write to GitHub:
+#   spec     runs Claude with the job's read-only token, from a checkout that keeps no credentials. Claude
+#            writes spec.md beside each new intent.md and commits nothing.
+#   publish  runs no agent. It takes only intent/<slug>/spec.md files for intents that exist and have no
+#            spec yet, at most 256 KB each and with nothing shaped like a credential, commits them with git
+#            hooks off, pushes a branch and opens the PR. Only this job sees LOOP_GH_TOKEN.
+# workflow_dispatch re-runs it for the intents changed in the latest commit, for example after a failed run.
 name: Spec on intent merge
 on:
   push:
     branches: [main]
     paths: ['intent/*/intent.md']
-permissions:
-  contents: write
-  pull-requests: write
+  workflow_dispatch:
+permissions: {}
 jobs:
   spec:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      dirs: ${{ steps.intents.outputs.dirs }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - run: npm install -g @anthropic-ai/claude-code
       - run: |
           claude plugin marketplace add jsnkle/ai-native-sdlc
           claude plugin install ai-native-sdlc@jsnkle --scope user
       - name: Find intents that changed and have no spec yet
         id: intents
+        env:
+          BEFORE: ${{ github.event.before }}
         run: |
           # Compare the whole push, not just the tip commit: a rebase merge can carry several commits.
-          before='${{ github.event.before }}'
+          before=$BEFORE
           git cat-file -e "$before" 2>/dev/null || before=$(git rev-parse HEAD~1)
           changed=$(git diff --name-only "$before" HEAD -- 'intent/*/intent.md' || true)
           todo=""
@@ -38,7 +52,7 @@ jobs:
             [ -f "$d/spec.md" ] || todo="$todo $d"
           done
           echo "dirs=$todo" >> "$GITHUB_OUTPUT"
-      - name: Write spec.md
+      - name: Write spec.md with a read-only token
         if: steps.intents.outputs.dirs != ''
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -51,18 +65,84 @@ jobs:
               --allowedTools "Read,Grep,Glob,Skill,Write,Edit,Bash(ls *),Bash(cat *),Bash(git log *),Bash(git diff *)" \
               --output-format text
           done
-      - name: Open PR
+      - name: Stage the specs
         if: steps.intents.outputs.dirs != ''
         env:
-          GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN || github.token }}
           DIRS: ${{ steps.intents.outputs.dirs }}
         run: |
+          mkdir -p "$RUNNER_TEMP/specs"
+          for d in $DIRS; do
+            if [ -f "$d/spec.md" ]; then
+              mkdir -p "$RUNNER_TEMP/specs/$d" && cp "$d/spec.md" "$RUNNER_TEMP/specs/$d/spec.md"
+            else
+              echo "::warning::No spec.md was written for $d."
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: steps.intents.outputs.dirs != ''
+        with:
+          name: specs-${{ github.run_id }}
+          path: ${{ runner.temp }}/specs/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: spec
+    if: needs.spec.outputs.dirs != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check LOOP_GH_TOKEN
+        # An expired or revoked token otherwise fails the checkout as "could not read Username".
+        env:
+          LOOP_GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN }}
+        run: |
+          [ -z "$LOOP_GH_TOKEN" ] && exit 0
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $LOOP_GH_TOKEN" https://api.github.com/user)
+          if [ "$code" != 200 ]; then
+            echo "::error::GitHub rejects LOOP_GH_TOKEN (HTTP $code). It has probably expired or been revoked: create a new one and store it as LOOP_GH_TOKEN, then re-run this workflow."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.LOOP_GH_TOKEN || github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: specs-${{ github.run_id }}
+          path: ${{ runner.temp }}/specs
+      - name: Check the specs, then open the PR
+        # The spec job ran an agent that could write files, so every file is checked here as untrusted data.
+        env:
+          GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN || github.token }}
+        run: |
+          src="$RUNNER_TEMP/specs"
+          files=$(cd "$src" && find . -mindepth 1 ! -type d | sed 's|^\./||' | sort)
+          taken=""
+          for f in $files; do
+            if ! [[ "$f" =~ ^intent/[a-z0-9][a-z0-9-]{0,79}/spec\.md$ ]]; then
+              echo "::error::Unexpected file in the spec artifact: $f. Nothing is published."; exit 1
+            fi
+            d=$(dirname "$f")
+            if [ -L "$src/$f" ] || [ ! -f "$src/$f" ]; then echo "::error::$f is not a regular file. Nothing is published."; exit 1; fi
+            if [ "$(wc -c < "$src/$f")" -gt 262144 ]; then echo "::error::$f is larger than 256 KB. Nothing is published."; exit 1; fi
+            if [ ! -f "$d/intent.md" ] || [ -e "$d/spec.md" ]; then
+              echo "::error::$f is not for an intent that exists without a spec. Nothing is published."; exit 1
+            fi
+            # Reads the whole file (no -q), so pipefail cannot turn a match into a pass.
+            if grep -E 'sk-ant-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}' "$src/$f" > /dev/null; then
+              echo "::error::$f contains something shaped like a credential. Nothing is published."; exit 1
+            fi
+            taken="$taken $d"
+          done
+          if [ -z "$taken" ]; then echo "::error::The spec artifact holds no spec.md."; exit 1; fi
           branch="spec/$(date +%Y%m%d-%H%M%S)"
           git config user.name "ai-native-sdlc bot"
           git config user.email "bot@users.noreply.github.com"
-          git checkout -b "$branch"
-          git add intent/
-          git commit -m "spec: draft spec.md for $DIRS"
-          git push -u origin "$branch"
-          gh pr create --title "Spec: $DIRS" \
+          git switch -q -c "$branch"
+          for d in $taken; do cp "$src/$d/spec.md" "$d/spec.md" && git add -- "$d/spec.md"; done
+          git -c core.hooksPath=/dev/null commit -q -m "spec: draft spec.md for$taken"
+          git push -q -u origin "$branch"
+          gh pr create --title "Spec:$taken" \
             --body "Drafted from the accepted intent.md. Product owner: review against the idea, work the flagged concerns first, then approve to start plan mode."

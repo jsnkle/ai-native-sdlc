@@ -8,7 +8,8 @@ anything it proposes enters the repo as a pull request through the normal review
 |---|---|
 | `bands.yaml` | The metric, its window and baseline, and what each tier permits. Version-controlled config. |
 | `detect.py` | Detection. Reads CI runs with `gh`, computes the statistic, prints a JSON report, exits with the tier. No model. Unit tested in `tests/test_detect.py`. |
-| `loop.sh` | Acts on the tier: log, diagnose read-only, or propose an `intent.md` as a PR. Logs every run to `ops/log/`. |
+| `loop.sh` | Acts on the tier: log, diagnose read-only, or have the agent write an `intent.md`. Logs every run to `ops/log/`. |
+| `propose.sh` | Checks the agent's `intent.md` as untrusted data, then commits it on a new branch, pushes and opens the PR. No model. |
 
 ## The statistic
 
@@ -38,8 +39,26 @@ normal, which is the point: the bands track the repo's own baseline.
 
 ```
 ops/loop.sh                      # once, against this repo's CI history
+ops/loop.sh --no-propose         # at tier 3, stop once the intent.md is staged in ops/log/proposal/
+ops/propose.sh REPORT DIR        # open the PR for a staged proposal (REPORT: detect.py's JSON)
 .venv/bin/python ops/detect.py   # detection only, JSON on stdout, tier as exit code
 ```
+
+At tier 3 the agent writes the intent and commits nothing, and `propose.sh` checks the file before
+it commits it. That separation holds in the workflow, where the two run in separate jobs: the agent's
+job has a read-only token and no stored credentials, and the propose job runs no agent, detects again
+from main and alone holds a token that can push.
+
+**Run by hand, it does not hold.** At tier 2 or 3 the agent reads CI logs that anyone who opens a pull
+request can write into, and it can write to your working copy: at tier 3 with `Write`, including
+`ops/propose.sh`, and at both tiers through `git log --output`, including `.git/config`, which the next
+git command reads and which can name commands for git to run. The loop then runs git and `propose.sh`
+under your own gh and git credentials, and so do you the next time you use the clone. A run by hand
+that reaches tier 2 or 3 can therefore give planted instructions command execution under your account,
+and a throwaway clone does not help because the credentials are not in the clone. Run the loop by hand
+only in a container or VM that holds no credentials of yours beyond a read-only `GH_TOKEN` and a
+spend-capped Anthropic key, with `--no-propose` (a read-only token cannot push anyway), and not at all on
+a repository that takes pull requests from outside. On such a repository, let the workflow run it.
 
 Locally it runs under your Claude Code login. Unattended it runs from a scheduled workflow
 with `ANTHROPIC_API_KEY` in repository secrets (a Console API key, which is billed separately from
