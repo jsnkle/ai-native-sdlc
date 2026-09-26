@@ -60,7 +60,7 @@ Nothing from the effort was merged. The kit is unchanged apart from the document
 
 In order of value. Each item waits for a real case or an owner decision.
 
-1. **Hooks fail closed.** Block with a message when `jq` is missing or no path can be read. Handle `NotebookEdit`'s `notebook_path`. Note that a machine without `jq` would then block every edit.
+1. **Hooks fail closed.** Block with a message when `jq` is missing or no path can be read. Handle `NotebookEdit`'s `notebook_path`. Note that a machine without `jq` would then block every edit. *Adopted in 0.2.7,* for the three hooks that guard edits. The production gate runs on every shell command, so it checks the whole request text instead of blocking them all.
 2. **The smoke test in `agent-evals.yml` asserts its exit codes.** Today it only prints them and cannot fail. An adopter who edits the default protected paths would need to change the test too.
 3. **Narrow the agent's tools.** Name the `gh api` endpoints it may call instead of allowing `gh api *`, and allow `git push` without force. *Adopted differently in 0.2.3.* Permission wildcards can match any text, so an endpoint list does not hold against injected instructions. Instead, the agent runs with a read-only token, and a separate job with no agent in it pushes and posts.
 4. **Evals fail on an errored or empty run,** with one case that must fail.

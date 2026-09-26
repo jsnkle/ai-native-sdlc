@@ -134,7 +134,7 @@ idle, as [docs/02-adoption-order.md](docs/02-adoption-order.md) describes.
 
 ## Status
 
-Version 0.2.5. The kit is complete and has been exercised end to end on a sandbox: by hand,
+Version 0.2.7. The kit is complete and has been exercised end to end on a sandbox: by hand,
 then codified, then triggered from CI. The policy skill, the eval cases and the monitoring bands
 are deliberately examples that each organisation replaces with its own. Known gaps are listed
 per play in the [retrospective scorecard](docs/retrospective-2026-09-03.md#scorecard-against-the-article).
