@@ -3,6 +3,15 @@
 All notable changes to the plugin and template are recorded here. The plugin version in
 `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` moves together.
 
+## 0.2.5 - 2026-09-26
+
+**The kit is for private repositories whose contributors are all trusted, and now says so up front.** It is not for public repositories or open-source projects that take contributions from people you do not know. The agents read pull requests, review comments and CI logs, and CI runs pull requests' code with the Anthropic key in reach. The guards added in 0.2.2 to 0.2.4 stay: the fix loop refuses forks and outside authors, and no agent job holds a token that can write to GitHub. They limit the damage of a mistake; they are not what makes the kit safe for untrusted contributors, and they were never going to be. Decided by the owner after the 0.2.4 review showed how many of the remaining risks start with an outside contributor.
+
+- The README, the plugin README, the template README and the handbook index open with the same statement.
+- Every workflow that runs Claude starts with a two-line header saying so, and `ops/README.md` opens with it, because the template README is not copied into projects and those files are.
+- `ops/README.md` on running the loop by hand now points at that scope instead of at "a repository that takes pull requests from outside".
+- The open items in 0.2.4's "What remains" that need an untrusted contributor stay recorded. They are outside the kit's intended use.
+
 ## 0.2.4 - 2026-09-26
 
 **Closing the loop and the spec workflow: no agent job holds a token that can write to GitHub.** Before this release, a 3-sigma breach ran Claude with `git *`, `cat *` and `gh run *` while `LOOP_GH_TOKEN` and `ANTHROPIC_API_KEY` were in its environment and the checkout kept a write token. The agent reads failed CI logs, and anyone whose pull request runs CI can write into those. `git *` is enough to run any command (`git -c alias.x='!cmd' x`). This hardening was predicted rather than observed; nothing like it has happened. The boundary is the split into jobs. The agents' tools are narrower too, but that is not a boundary: `git log --output` can still write any file in the job.

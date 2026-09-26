@@ -1,3 +1,5 @@
+# PRIVATE REPOSITORIES WITH TRUSTED CONTRIBUTORS ONLY. Not for public or open-source repositories: see
+# the ai-native-sdlc README (github.com/jsnkle/ai-native-sdlc). The agent below reads what contributors write.
 # Stage 5: Deploy, AI in the PR review loop. Every PR gets the same review passes from REVIEW.md, posted
 # as ONE comment-only review with inline findings. The managed Code Review service or the
 # claude-code-action can replace this; the prompt and REVIEW.md are what matter.

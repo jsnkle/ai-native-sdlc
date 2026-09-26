@@ -1,3 +1,5 @@
+# PRIVATE REPOSITORIES WITH TRUSTED CONTRIBUTORS ONLY. Not for public or open-source repositories: see
+# the ai-native-sdlc README (github.com/jsnkle/ai-native-sdlc). The agent below reads what contributors write.
 # Stage 5: Deploy, the fix loop. A reviewer or author writes "@claude ..." on a PR and Claude addresses it:
 # "@claude review" runs a fresh review pass; anything else runs one round of the babysit-pr skill, which
 # addresses unresolved review threads and failing checks. The claude-code-action does the same job with

@@ -1,5 +1,15 @@
 # plugin/template/ — the per-repo files
 
+> **Private repositories and trusted teams only.** This kit is for a private repository where
+> everyone who can push a branch, open a pull request or comment on one is a trusted member of your
+> team. It is not for public repositories, and not for open-source projects that take contributions
+> from people you do not know. Its agents read pull requests, review comments and CI logs, and CI runs
+> the code in those pull requests with your API key in reach, so anyone who can write them can try to
+> steer an agent. The fix loop refuses forks and outside authors, GitHub gives fork pull requests no
+> secrets, and no agent job holds a token that can write to GitHub, but those guards limit the damage
+> of a mistake. They do not make the kit safe for contributors you do not trust. Closing the loop, for
+> one, reads the CI logs of every pull request.
+
 Everything here is copied into a project and then customised. Shared institutional pieces (the skills, agents and generic hooks) are **not** here; they come from the `ai-native-sdlc` plugin so every project stays on one version. `scripts/new-project.sh` does the copy for a new project and the `adopt` skill does it for an existing one. Neither copies this README, and `intent/_example/` is left out unless `new-project.sh` is given `--with-example`.
 
 `{{PROJECT_NAME}}` in `CLAUDE.md` and `CODEOWNERS` is substituted by the script. `CLAUDE.md`, `REVIEW.md` and the pull request template carry HTML comments (`<!-- -->`) where a human has to fill something in.

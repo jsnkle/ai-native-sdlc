@@ -1,5 +1,8 @@
 # Closing the loop
 
+**Private repositories with trusted contributors only.** The agent here reads the CI logs of every pull
+request. See the kit's README for why the kit is not for public or open-source repositories.
+
 Stage 6 of the AI-native SDLC. A deterministic script watches one metric and invokes Claude only
 when a control band is breached. What Claude may do is set by the tier in `bands.yaml`, and
 anything it proposes enters the repo as a pull request through the normal review gate.
@@ -54,11 +57,12 @@ request can write into, and it can write to your working copy: at tier 3 with `W
 `ops/propose.sh`, and at both tiers through `git log --output`, including `.git/config`, which the next
 git command reads and which can name commands for git to run. The loop then runs git and `propose.sh`
 under your own gh and git credentials, and so do you the next time you use the clone. A run by hand
-that reaches tier 2 or 3 can therefore give planted instructions command execution under your account,
-and a throwaway clone does not help because the credentials are not in the clone. Run the loop by hand
-only in a container or VM that holds no credentials of yours beyond a read-only `GH_TOKEN` and a
-spend-capped Anthropic key, with `--no-propose` (a read-only token cannot push anyway), and not at all on
-a repository that takes pull requests from outside. On such a repository, let the workflow run it.
+that reaches tier 2 or 3 can therefore act on instructions planted in a CI log, under your account, and
+a throwaway clone does not help because the credentials are not in the clone. The kit is only for private
+repositories whose contributors are all trusted (see the kit's README), where the CI logs come from your
+team's code; that is the trust a run by hand relies on. For more distance, run it in a container or VM
+that holds no credentials of yours beyond a read-only `GH_TOKEN` and a spend-capped Anthropic key, with
+`--no-propose` (a read-only token cannot push anyway).
 
 Locally it runs under your Claude Code login. Unattended it runs from a scheduled workflow
 with `ANTHROPIC_API_KEY` in repository secrets (a Console API key, which is billed separately from

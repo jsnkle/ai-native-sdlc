@@ -2,6 +2,16 @@
 
 This handbook explains the process to the humans who run it. It is adapted from Anthropic's *AI-Native SDLC playbook* (August 2026) and tailored to the plugin and template in this repo. Nothing here is required reading for Claude; the agent reads `CLAUDE.md`, the skills in `plugin/`, and the files in `intent/`.
 
+> **Private repositories and trusted teams only.** This kit is for a private repository where
+> everyone who can push a branch, open a pull request or comment on one is a trusted member of your
+> team. It is not for public repositories, and not for open-source projects that take contributions
+> from people you do not know. Its agents read pull requests, review comments and CI logs, and CI runs
+> the code in those pull requests with your API key in reach, so anyone who can write them can try to
+> steer an agent. The fix loop refuses forks and outside authors, GitHub gives fork pull requests no
+> secrets, and no agent job holds a token that can write to GitHub, but those guards limit the damage
+> of a mistake. They do not make the kit safe for contributors you do not trust. Closing the loop, for
+> one, reads the CI logs of every pull request.
+
 ## What is here
 
 | File | One line |
