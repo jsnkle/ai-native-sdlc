@@ -3,51 +3,136 @@
 # with the tools ops/bands.yaml allows for that tier. Anything it proposes arrives as a PR through
 # branch protection; the workflow has no route to main.
 #
+# Two jobs, so the agent never holds a token that can write to GitHub. The agent reads CI logs, and
+# anyone whose pull request runs CI can write into those.
+#   loop     detects and, on a breach, runs Claude with the job's read-only token, from a checkout that
+#            keeps no credentials. At tier 3 Claude writes one intent.md and commits nothing; the loop
+#            stages it under ops/log/proposal/.
+#   propose  runs no agent. It detects again from main, and ops/propose.sh checks the intent.md as
+#            untrusted data (one new file at intent/<slug>/intent.md, at most 64 KB, nothing shaped like
+#            a credential) before it commits it on a new branch, pushes and opens the PR.
+#
 # Needs: ANTHROPIC_API_KEY in repository secrets (a Console key, sk-ant-api03-..., from a workspace
 # with credits), a venv-based Makefile and requirements-dev.txt (the template ships neither; see its
 # README), and the repository setting
 # Settings > Actions > General > Workflow permissions > "Allow GitHub Actions to create and approve
-# pull requests", or the propose step pushes its branch and then fails at gh pr create with
+# pull requests", or the propose job pushes its branch and then fails at gh pr create with
 # "GitHub Actions is not permitted to create or approve pull requests".
 # The default GITHUB_TOKEN can open the PR but cannot trigger CI on it; use a fine-grained PAT as
-# LOOP_GH_TOKEN if the proposal PRs must run checks automatically.
+# LOOP_GH_TOKEN if the proposal PRs must run checks automatically. Only the propose job sees it.
 name: closing-the-loop
 on:
   schedule:
     - cron: '0 6 * * 1-5'
   workflow_dispatch:
-permissions:
-  contents: write
-  pull-requests: write
-  actions: read
+permissions: {}
 jobs:
   loop:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      propose: ${{ steps.loop.outputs.propose }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python3 -m venv .venv && .venv/bin/pip install -q -r requirements-dev.txt
+      # detect.py needs only PyYAML, so nothing else from the project's dependencies runs in this job.
+      - run: python3 -m venv .venv && .venv/bin/pip install -q 'pyyaml>=6,<7'
       - run: npm install -g @anthropic-ai/claude-code
       - name: Install the SDLC plugin the loop's propose step uses
         run: |
           claude plugin marketplace add jsnkle/ai-native-sdlc
           claude plugin install ai-native-sdlc@jsnkle --scope user
-      - name: Run the loop
+      - name: Run the loop with a read-only token
+        id: loop
+        # GH_TOKEN is this job's token: it can read runs and pull requests, and every write fails.
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ops/loop.sh --no-propose
+          if [ -d ops/log/proposal ]; then echo "propose=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Refuse a log that contains a credential
+        # A backstop before the log becomes a downloadable artifact: planted instructions could try to
+        # leak the Anthropic key into a diagnosis or the intent.md.
+        id: scan
+        if: always()
+        run: |
+          if [ -d ops/log ] && grep -rE 'sk-ant-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}' ops/log > /dev/null; then
+            echo "::error::The loop's log contains something shaped like a credential, so it is not kept and nothing is proposed."
+            exit 1
+          fi
+      - name: Keep the detection log as a run artifact
+        if: always() && steps.scan.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ops-log-${{ github.run_id }}
+          path: ops/log/
+          if-no-files-found: ignore
+
+  propose:
+    needs: loop
+    if: needs.loop.outputs.propose == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    steps:
+      - name: Check LOOP_GH_TOKEN
+        # An expired or revoked token otherwise fails the checkout as "could not read Username".
+        env:
+          LOOP_GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN }}
+        run: |
+          [ -z "$LOOP_GH_TOKEN" ] && exit 0
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $LOOP_GH_TOKEN" https://api.github.com/user)
+          if [ "$code" != 200 ]; then
+            echo "::error::GitHub rejects LOOP_GH_TOKEN (HTTP $code). It has probably expired or been revoked: create a new one and store it as LOOP_GH_TOKEN."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          # No stored credentials while pip installs; the push credential is set just before ops/propose.sh.
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m venv .venv && .venv/bin/pip install -q -r requirements-dev.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: ops-log-${{ github.run_id }}
+          path: ${{ runner.temp }}/loop
+      - name: Detect again, then propose
+        # The loop job ran an agent that could write files, so its report is not reused: detection runs
+        # again here from main, and only the staged intent.md is taken from the artifact.
+        # Detection reads runs with the job's own token, because LOOP_GH_TOKEN need not have actions: read.
+        env:
+          JOB_TOKEN: ${{ github.token }}
           GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN || github.token }}
         run: |
           git config user.name "closing-the-loop"
           git config user.email "closing-the-loop@users.noreply.github.com"
-          ops/loop.sh
-      - name: Keep the detection log as a run artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ops-log
-          path: ops/log/
-          if-no-files-found: ignore
+          report="$RUNNER_TEMP/report.json"
+          set +e
+          GH_TOKEN="$JOB_TOKEN" .venv/bin/python ops/detect.py --quiet > "$report"
+          tier=$?
+          set -e
+          # A crash also exits non-zero, so the tier counts only when the report agrees with it.
+          if ! jq -e --argjson t "$tier" '.tier == $t' "$report" > /dev/null 2>&1; then
+            echo "::error::Detection failed (exit $tier)."; cat "$report"; exit 1
+          fi
+          if [ "$tier" != 3 ]; then
+            echo "::notice::Detection now reads tier $tier, not 3, so nothing is proposed."
+            exit 0
+          fi
+          # The same header actions/checkout would have stored, set only now.
+          git config --local "http.${GITHUB_SERVER_URL}/.extraheader" \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          ops/propose.sh "$report" "$RUNNER_TEMP/loop/proposal"

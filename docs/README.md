@@ -13,6 +13,7 @@ This handbook explains the process to the humans who run it. It is adapted from 
 | [roles/](roles/README.md) | What each role owns, approves, and never does. |
 | [source-of-truth.md](source-of-truth.md) | Repo versus Jira: deciding where each artifact's authoritative record lives. |
 | [metrics.md](metrics.md) | Every leading and lagging indicator in one table. |
+| [e2e-2026-09-26.md](e2e-2026-09-26.md) | What the review, fix, triage and closing-the-loop workflows did on the sandbox with real triggers, and what changed because of it. |
 
 ## Reading order by audience
 

@@ -107,7 +107,7 @@ jobs:
               --output-format json --json-schema "$schema" > "$out/result.json"
           else
             schema='{"type":"object","properties":{"summary":{"type":"string"},"replies":{"type":"array","items":{"type":"object","properties":{"comment_id":{"type":"integer"},"body":{"type":"string"}},"required":["comment_id","body"]}}},"required":["summary","replies"]}'
-            claude -p "/ai-native-sdlc:babysit-pr $PR. A person wrote this on the PR: \"$COMMENT\". This is one round in CI with a read-only GitHub token: address the unresolved review threads and failing checks, run make build, make test and make lint, and commit locally with messages naming what each commit addresses. Do not push and do not post; the workflow pushes your commits and posts your replies. Return structured output: replies, each with the databaseId of the review comment you answer as comment_id and a body saying what changed or, if the comment is wrong, why nothing did; and a short summary of the round. Never weaken a test. $untrusted" \
+            claude -p "/ai-native-sdlc:babysit-pr $PR. A person wrote this on the PR: \"$COMMENT\". This is one round in CI with a read-only GitHub token: address the unresolved review threads and failing checks, run make build, make test and make lint, and commit locally with messages naming what each commit addresses. Do not push and do not post; the workflow pushes your commits and then posts your replies and summary, so write them as they will read once the commits are on the branch. Return structured output: replies, each with the databaseId of the review comment you answer as comment_id and a body saying what changed or, if the comment is wrong, why nothing did; and a short summary of the round. Never weaken a test. $untrusted" \
               --permission-mode acceptEdits \
               --allowedTools "Read,Write,Edit,Glob,Grep,Agent,Skill,Bash(make build),Bash(make test),Bash(make lint),Bash(git status),Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git add *),Bash(git commit *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr checks *),Bash(gh run view *),Bash(gh run list *),Bash(gh repo view *),Bash(gh api *),Bash(ls *),Bash(cat *),Bash(grep *),Bash(head *),Bash(tail *)" \
               --output-format json --json-schema "$schema" > "$out/result.json"
@@ -174,6 +174,18 @@ jobs:
             jq '{commit_id, event: "COMMENT", body: (.body + "\n\n" + ([.comments[] | "- `\(.path):\(.line)` \(.body)"] | join("\n")))}' "$out/review.json" \
               | gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" --input - > /dev/null
           fi
+      - name: Check LOOP_GH_TOKEN
+        # An expired or revoked token otherwise fails the checkout below as "could not read Username".
+        if: needs.agent.outputs.mode == 'fix'
+        env:
+          LOOP_GH_TOKEN: ${{ secrets.LOOP_GH_TOKEN }}
+        run: |
+          [ -z "$LOOP_GH_TOKEN" ] && exit 0
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $LOOP_GH_TOKEN" https://api.github.com/user)
+          if [ "$code" != 200 ]; then
+            echo "::error::GitHub rejects LOOP_GH_TOKEN (HTTP $code). It has probably expired or been revoked: create a new one and store it as LOOP_GH_TOKEN, then re-run this job."
+            exit 1
+          fi
       - uses: actions/checkout@v4
         if: needs.agent.outputs.mode == 'fix'
         with:
@@ -230,3 +242,12 @@ jobs:
             done
           jq -r '.summary' "$out/output.json" | sed '1s/^/[claude-mention] /' \
             | gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file -
+      - name: Say on the PR that the round stopped
+        # A refusal otherwise shows only as a failed run, and whoever asked sees nothing on the PR.
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" \
+            --body "[claude-mention] This round stopped before it finished, so some or all of it was not published. The run says why: $RUN_URL"

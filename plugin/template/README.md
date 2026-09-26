@@ -26,7 +26,7 @@ Everything here is copied into a project and then customised. Shared institution
 | `.github/workflows/triage-failed-build.yml` | Deploy: CI/CD integration | Your build command and log path. The build runs with a read-only token and no secrets; a separate job triages with `claude --bare` and posts. |
 | `.github/workflows/closing-the-loop.yml` | Maintain: closing the loop | The schedule. |
 | `ops/bands.yaml`, `ops/README.md` | Maintain: closing the loop | The metric, the window and baseline, and what each tier permits. |
-| `ops/detect.py`, `ops/loop.sh`, `ops/__init__.py` | Maintain: closing the loop | Detection and the tiered response. Nothing to change unless the metric does. |
+| `ops/detect.py`, `ops/loop.sh`, `ops/propose.sh`, `ops/__init__.py` | Maintain: closing the loop | Detection and the tiered response. Nothing to change unless the metric does. |
 | `tests/test_detect.py` | Maintain: closing the loop | Unit tests for the detector. Needs `pyyaml` as a dev dependency. |
 
 ## Maturity ladder
@@ -43,11 +43,15 @@ Claude Code ignores `permissions.allow` in a project's `.claude/settings.json` u
 
 ## What the workflows need
 
-Every workflow that calls Claude needs `ANTHROPIC_API_KEY` in the repository secrets: a Console key from a workspace with credits, pasted as its value, not its name. The workflows that use the plugin's skills or hooks install it from the marketplace themselves. Two more settings matter for the ones that open pull requests:
+Every workflow that calls Claude needs `ANTHROPIC_API_KEY` in the repository secrets: a Console key from a workspace with credits, pasted as its value, not its name. The workflows that use the plugin's skills or hooks install it from the marketplace themselves.
+
+- **A key only CI uses, with a spending limit.** The agent jobs run a pull request's own code with this key in the environment, so instructions planted in a PR can reach it. Give CI its own workspace (Console: Settings > Workspaces), set a monthly cap on its Spend limits tab, and create the key there, scoped to that workspace and linked to a service account rather than a person. The cap is what limits the damage if the key leaks.
+
+Two more settings matter for the ones that open pull requests:
 
 - **Actions may create PRs.** Settings > Actions > General > Workflow permissions > "Allow GitHub Actions to create and approve pull requests". Without it the spec and loop workflows push a branch and then fail at `gh pr create`.
-- **`LOOP_GH_TOKEN`.** A PR opened or a push made with the default Actions token triggers no other workflow, so the spec PR gets no checks and the fix loop's pushes get no CI. A fine-grained personal access token with contents and pull-requests write, stored as `LOOP_GH_TOKEN`, gives the full chain. The three workflows that use it fall back to the default token when it is absent.
-- **Who owns `LOOP_GH_TOKEN`.** The token acts as the account that created it. The fix loop's publish job pushes with it, and `closing-the-loop` hands it to an agent. Create it from an account that is not a code owner, so nothing done with it can count as a code-owner approval.
+- **`LOOP_GH_TOKEN`.** A PR opened or a push made with the default Actions token triggers no other workflow, so the spec PR gets no checks and the fix loop's pushes get no CI. A fine-grained personal access token with contents and pull-requests write, stored as `LOOP_GH_TOKEN`, gives the full chain. The three workflows that use it fall back to the default token when it is absent. Fine-grained tokens expire; the three workflows check the token before they use it and fail with a message that names it.
+- **Who owns `LOOP_GH_TOKEN`.** The token acts as the account that created it. Only jobs that run no agent hold it: the fix loop's publish job, `closing-the-loop`'s propose job and `spec-on-intent-merge`'s publish job. Create it from an account that is not a code owner, so nothing done with it can count as a code-owner approval.
 - **`requirements-dev.txt` and a Makefile.** `agent-evals`, `claude-mention`, `closing-the-loop` and `triage-failed-build` install `requirements-dev.txt` into a venv, and the build triage and the agent's allowed commands assume `make build`, `make test`, `make lint` and `make run`, as in `CLAUDE.md`. The template ships neither file; add them or edit those steps.
 
 Each run is a Claude call with a price. When a repo is idle, `gh workflow disable <name>` per workflow, and `gh workflow enable` to bring one back.
