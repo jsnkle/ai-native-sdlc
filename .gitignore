@@ -5,3 +5,8 @@ triage.md
 node_modules/
 __pycache__/
 .pytest_cache/
+
+# Local secrets (e.g. TYPESAFE_API_KEY); commit an .env.example instead
+.env
+.env.*
+!.env.example
