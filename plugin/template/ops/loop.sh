@@ -9,8 +9,7 @@
 #                                 the workflow's propose job opens the PR (ops/propose.sh)
 #
 # At tier 3 the agent writes intent/<slug>/intent.md and commits nothing; ops/propose.sh checks the file and
-# is what commits, pushes and opens the PR. The narrower tools are not a boundary (git log --output can
-# write files): in CI the boundary is that the propose step runs in a separate job. See ops/README.md.
+# is what commits, pushes and opens the PR.
 set -euo pipefail
 propose=yes
 [ "${1:-}" = --no-propose ] && propose=no

@@ -18,8 +18,6 @@ All notable changes to the plugin and template are recorded here. The plugin ver
 
 - The README, the plugin README, the template README and the handbook index open with the same statement.
 - Every workflow that runs Claude starts with a two-line header saying so, and `ops/README.md` opens with it, because the template README is not copied into projects and those files are.
-- `ops/README.md` on running the loop by hand now points at that scope instead of at "a repository that takes pull requests from outside".
-- The open items in 0.2.4's "What remains" that need an untrusted contributor stay recorded. They are outside the kit's intended use.
 
 ## 0.2.4 - 2026-09-26
 
@@ -43,8 +41,6 @@ From the end-to-end run of 0.2.3 on the sandbox (all observed; details in [docs/
 - **Build triage posts only the three-line summary.** It posted the cause, the flaky-or-real call and then the summary as three sections.
 - **What remains:**
   - The `claude-mention` and `triage-failed-build` changes above have not run on GitHub. Those workflows run on comment and pull request events, which use the default branch's copy, so they could not be dispatched from a test branch. closing-the-loop 0.2.4 did run on the sandbox from a branch and opened its proposal PR.
-  - Run by hand, the separation does not hold. At tiers 2 and 3 the agent can write to the working copy (with `git log --output`, even `.git/config`), and git and `propose.sh` then run under your credentials, so a run by hand can give planted instructions command execution under your account. `ops/README.md` says to run it by hand only in a container or VM without your credentials, and not at all on a repository that takes outside pull requests.
-  - Plausible, not demonstrated: proposal PRs are opened by the `LOOP_GH_TOKEN` account, which the fix loop treats as a trusted author, and `claude-review` reviews them as `github-actions`, whose comments the fix loop acts on. Text planted in a CI log could travel through the intent and the review into instructions the fix loop trusts, once a maintainer mentions `@claude` on a proposal PR. The fix loop's token is read-only and its publish job keeps its checks, so what could reach the branch is ordinary code, which CI runs, with the repository's secrets, before a human reviews it. A candidate fix is for `claude-mention` to refuse `loop/` branches.
 - **Projects that copied the template earlier should replace `closing-the-loop.yml`, `spec-on-intent-merge.yml`, `claude-mention.yml`, `triage-failed-build.yml` and `ops/loop.sh`, and add `ops/propose.sh`.**
 
 ## 0.2.3 - 2026-09-25
