@@ -8,9 +8,29 @@
 set -u
 
 input=$(cat)
-path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null)
-# Write sends .content; Edit sends .new_string.
-content=$(printf '%s' "$input" | jq -r '.tool_input.content // .tool_input.new_string // empty' 2>/dev/null)
+
+# Fail closed: an edit this hook cannot read is blocked, never waved through.
+if ! command -v jq >/dev/null 2>&1; then
+  cat >&2 <<MSG
+Blocked: no-secrets.sh needs jq to read this edit, and jq is not installed,
+so the edit cannot be checked for credentials. Tell the engineer: install jq
+(brew install jq, or apt-get install jq), then retry.
+MSG
+  exit 2
+fi
+path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // .tool_input.path // empty' 2>/dev/null)
+# The new text: Write sends .content, Edit .new_string, MultiEdit .edits[].new_string, NotebookEdit .new_source.
+# jq fails when none of them is there.
+if ! content=$(printf '%s' "$input" | jq -r '.tool_input
+    | [.content, .new_string, .new_source, (.edits // [] | .[]? | .new_string)]
+    | map(select(type == "string"))
+    | if length == 0 then error("no new text") else join("\n") end' 2>/dev/null); then
+  cat >&2 <<MSG
+Blocked: no-secrets.sh could not read the new text of this edit to '${path:-<unknown>}',
+so it cannot be checked for credentials. Tell the engineer which tool made the edit.
+MSG
+  exit 2
+fi
 [ -z "$content" ] && exit 0
 
 # Example/fixture files that legitimately hold fake keys can opt out by name.

@@ -3,6 +3,21 @@
 All notable changes to the plugin and template are recorded here. The plugin version in
 `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` moves together.
 
+## 0.2.7 - 2026-09-26
+
+**The guardrail hooks fail closed: an edit they cannot read is blocked, not allowed.** Each hook reads the edit with `jq`. When `jq` was missing, or the payload had no file path or new text where the hook looked, the hook found nothing to check and let the edit through without a word. Now it blocks the edit and says why. On a machine without `jq` that blocks every edit until `jq` is installed; that is the trade-off, a guardrail that is off says so. A missing `jq` has not been seen in a real session: the Mac this was built on has it at `/usr/bin/jq`, and GitHub's runners have it. The same silent pass has been seen twice from other causes: the `/dev/stdin` bug found in 0.2.0, and a Codex-shaped edit fed to `protect-tests.sh` on 2026-09-25.
+
+- **`no-secrets.sh`** blocks when `jq` is missing or it cannot find the new text of the edit.
+- **`protect-tests.sh`** does the same during a fix task. Outside one it still exits at once and needs nothing.
+- **The template's `protected-paths.sh`** blocks when `jq` is missing or it cannot find the file path, whenever `.claude/protected-paths` exists.
+- **The template's `production-gate.sh`** runs on every shell command, so blocking would stop them all, including the one that installs `jq`. Instead, when `jq` is missing or the command cannot be read, it checks the whole request text. That text holds the command, so the gate blocks everything the exact check would, and may over-match; its message says so.
+- The hooks read the file path and new text of `Write`, `Edit`, `MultiEdit` and `NotebookEdit` payloads, so none of those is blocked for being unreadable.
+- **Hook commands quote their paths.** `hooks.json` and the template's `settings.json` left `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PROJECT_DIR}` unquoted, so a plugin or project folder with a space in its name split the command. bash then exits 127, which Claude Code treats as a non-blocking error, and the edit went through. Found by `claude plugin validate`'s warning and confirmed with a shell run; not seen in a real session. The hooks play's settings example is quoted too.
+- Under Codex, whose edits reach hooks as patches, `no-secrets.sh` would now block every edit and `protect-tests.sh` every edit during a fix task. This follows from the payload shape; it has not been run in Codex. The plugin README says so.
+- `protected-paths.sh` quotes the project root when it strips it from the path (shellcheck SC2295), so a root with glob characters in it is matched literally.
+- Tested on macOS: 42 cases across the four hooks with `jq`, without it, and with unreadable payloads, under bash 5 and the system bash 3.2; the four old hooks allowed every no-`jq` case. Three headless Claude Code sessions from a project folder with a space in its name, one with the plugin in such a folder too: a protected path and a key were blocked and a clean write went through. Not yet run in CI on Linux.
+- **Projects pick up the plugin hooks when the plugin updates. Projects that copied the template earlier should replace `.claude/hooks/protected-paths.sh` and `.claude/hooks/production-gate.sh`, and quote the hook commands in `.claude/settings.json`.**
+
 ## 0.2.6 - 2026-09-26
 
 **`no-secrets.sh` no longer lets a placeholder excuse a literal credential elsewhere in the same file.** The check for literal assignments (`password=`, `secret=`, `api_key=`, `token=`) was skipped for the whole file whenever any line held a placeholder or an environment lookup. So a literal `password = "..."` was blocked on its own and allowed once the file also read `token = ${TOKEN}`. Each assignment is now judged on its own value. This was found by reading the hook and confirmed by running it; it has not been seen in a real session. The patterns are unchanged, and the other checks (AWS key ids, private keys, `sk-` and GitHub tokens) behave as before. Tested on macOS only.

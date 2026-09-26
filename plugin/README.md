@@ -77,12 +77,22 @@ Both read their payload with `$(cat)`. Reading `< /dev/stdin` looks identical
 on a Mac and silently fails open on a Linux runner; the template's evals in CI
 are what caught it.
 
+**They fail closed.** If `jq` is not installed, or the payload has no file path
+or new text they can read, they block the edit and say why instead of allowing
+it. On a machine without `jq` that blocks every edit (for `protect-tests.sh`,
+every edit during a fix task) until `jq` is installed. They know the payload
+shapes of `Write`, `Edit`, `MultiEdit` and `NotebookEdit`, so none of those is
+blocked for being unreadable.
+
 **Claude Code only.** Codex can install this plugin, because it reads
 `.claude-plugin/`, and it uses the skills. But Codex hands a file edit to a hook
-as a patch, not as `file_path` and `content`, so both hooks find nothing to check
-and allow the edit without a message. We confirmed the install and the skills
-with Codex CLI 0.155.0 on 2026-09-25, and fed `protect-tests.sh` a patch-shaped
-edit that it allowed. Do not rely on these hooks under another agent.
+as a patch, not as `file_path` and `content`. Up to 0.2.6 both hooks found
+nothing to check and allowed the edit without a message: we confirmed the install
+and the skills with Codex CLI 0.155.0 on 2026-09-25, and fed `protect-tests.sh` a
+patch-shaped edit that it allowed. Since 0.2.7 they block an edit they cannot
+read, so under Codex `no-secrets.sh` would block every edit, and `protect-tests.sh`
+every edit during a fix task. That follows from the payload shape; it has not
+been run in Codex. Do not rely on these hooks under another agent.
 
 ## Non-interactive use
 
