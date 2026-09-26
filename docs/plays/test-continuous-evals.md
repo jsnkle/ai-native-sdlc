@@ -42,3 +42,16 @@ Evals give QA a gate that keeps up with agent output. The pass-rate threshold is
 
 - **Leading.** Eval pass rate over time, reported by the suite on every run, and how long a production incident takes to become a permanent eval.
 - **Lagging.** Regressions caught in CI compared with regressions found in production, from the incident tracker.
+
+## Ready, not adopted
+
+**Judge what the agent's report means instead of matching strings in it.** `output_contains` and `output_not_contains` look for exact substrings in the agent's final text. They stand in for questions about meaning: did it say the tests passed, did it say it skipped a test. This is predicted, not observed. No string check has misfired in a run, and the two cases the sandbox's first run found broken failed for other reasons. The risk is easy to construct, though. The template README's example, `"output_not_contains": ["skip"]`, fails an agent that reports "no tests were skipped". The sandbox's protected-paths eval requires the word "protected", so it fails an agent that says "the hook blocked the edit".
+
+The proposal is an `output_judgments` field beside the two string checks. Each entry is a yes/no question about the report, such as "Does the report say that a test was skipped, deleted or weakened?", with the answer it must have. A decision model answers it with the task prompt and the final text as input: [TypeSafe](https://docs.typesafe.ai)'s Jev, asked a Noul question, returns the probability of yes rather than text. `check.sh` passes above one threshold, fails below another, and prints anything in between as uncertain for a person to read, rather than calling it either way. The commands and file checks stay in code, because they check facts, not meaning. Claude with a JSON schema could answer the same questions. The reasons to prefer a decision model are a probability to set thresholds on, no text to parse, and a grader that is not the model being graded.
+
+If it is adopted:
+
+- Pin the model version (`jev-1.13.0`, not `jev-latest`). The suite exists to catch changes in the configuration, and a grader that changes underneath it would look like one.
+- Make it opt-in. Without `TYPESAFE_API_KEY` the field is skipped with a notice, and the string checks run as they do today. Adopting it adds a second vendor and a CI secret to every project and sends the agent's report to that vendor, which is a data-handling decision for any company fork.
+- Set the thresholds from the suite's own past results.
+- Adopt it when a string check passes or fails a report whose meaning says otherwise.

@@ -27,11 +27,12 @@ elif printf '%s' "$content" | grep -Eq '\bsk-(ant-)?[A-Za-z0-9_-]{16,}'; then
   hit="sk- style API token"
 elif printf '%s' "$content" | grep -Eq '\bgh[pousr]_[A-Za-z0-9]{30,}'; then
   hit="GitHub token"
-elif printf '%s' "$content" | grep -Eiq '(password|passwd|secret|api[_-]?key|token)[[:space:]]*[=:][[:space:]]*["'"'"']?[A-Za-z0-9/+_.@#-]{8,}["'"'"']?'; then
-  # Ignore obvious placeholders and env lookups.
-  if ! printf '%s' "$content" | grep -Eiq '(password|passwd|secret|api[_-]?key|token)[[:space:]]*[=:][[:space:]]*["'"'"']?(\$\{?[A-Z_]+|<[^>]*>|xxx+|changeme|placeholder|your[_-]|example|os\.environ|process\.env|getenv)'; then
-    hit="literal credential assignment (password=/secret=/api_key=/token=)"
-  fi
+# Ignore obvious placeholders and env lookups, judging each assignment on its own value: a placeholder
+# elsewhere in the file must not excuse a literal one.
+elif printf '%s' "$content" \
+    | grep -Eio '(password|passwd|secret|api[_-]?key|token)[[:space:]]*[=:][[:space:]]*["'"'"']?[A-Za-z0-9/+_.@#-]{8,}["'"'"']?' \
+    | grep -Eivq '(password|passwd|secret|api[_-]?key|token)[[:space:]]*[=:][[:space:]]*["'"'"']?(\$\{?[A-Z_]+|<[^>]*>|xxx+|changeme|placeholder|your[_-]|example|os\.environ|process\.env|getenv)'; then
+  hit="literal credential assignment (password=/secret=/api_key=/token=)"
 fi
 
 if [ -n "$hit" ]; then

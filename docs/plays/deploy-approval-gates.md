@@ -54,3 +54,19 @@ Hooks are the approval gates. The gate condition is enforced every time, for eve
 
 - **Leading.** Time spent waiting on each gate. Every hook decision goes to the OpenTelemetry export with a timestamp and a verdict, so the wait is visible per gate.
 - **Lagging.** Gate violations reaching production before and after hooks, from the incident tracker.
+
+## Ready, not adopted
+
+**Gate deploys by where they go, not by the words in the command.** `production-gate.sh` blocks a command only when it contains both "deploy" and "production". This is predicted, not observed: there has been no real deploy target to gate (see the [2026-09-03 retrospective](../retrospective-2026-09-03.md)). Constructed commands run through the hook on 2026-09-26 show the risk. `kubectl apply -f k8s/ -n prod`, `helm upgrade api ./chart --kube-context prd` and `fly deploy -a claims-prd` all passed, and `grep -rn deploy docs/production.md` was blocked.
+
+The proposal has two parts, in this order:
+
+1. **In code.** Every deploy goes through one named entry point that takes the environment as an argument, such as `make deploy ENV=production` or an MCP deploy tool, and the gate matches that entry point exactly. `permissions.deny` refuses direct `kubectl`, `helm` and cloud CLI calls, so the entry point is the only route. The retrospective already lists this for when there is a deploy target.
+2. **Optional: a second check that can only add friction.** For a Bash command the rule allows, a decision model answers "Could this command change a production system?". [TypeSafe](https://docs.typesafe.ai)'s Jev, asked a Noul question, returns the probability of yes in about 100 ms. Above a threshold the hook returns `ask`, so a person confirms. It never allows what the rule blocks. Jev's documentation says text written to mislead can shift its answers. Used this way, a misled answer only loses the extra check; the rule still holds.
+
+If it is adopted:
+
+- Adopt part 1 when the project has a real deploy target. Adopt part 2 only if commands the entry point cannot see keep reaching production.
+- A non-interactive run has nobody to confirm, so there `ask` should block.
+- Pin the model version, and make part 2 opt-in. Without `TYPESAFE_API_KEY`, or when the call fails, the hook applies the rule alone. It runs on every Bash call, so measure the added latency.
+- Every command goes to a third party, and commands can carry hostnames and sometimes an inline token. That is a data-handling decision for any company fork.

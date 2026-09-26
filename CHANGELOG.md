@@ -3,6 +3,15 @@
 All notable changes to the plugin and template are recorded here. The plugin version in
 `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` moves together.
 
+## 0.2.6 - 2026-09-26
+
+**`no-secrets.sh` no longer lets a placeholder excuse a literal credential elsewhere in the same file.** The check for literal assignments (`password=`, `secret=`, `api_key=`, `token=`) was skipped for the whole file whenever any line held a placeholder or an environment lookup. So a literal `password = "..."` was blocked on its own and allowed once the file also read `token = ${TOKEN}`. Each assignment is now judged on its own value. This was found by reading the hook and confirmed by running it; it has not been seen in a real session. The patterns are unchanged, and the other checks (AWS key ids, private keys, `sk-` and GitHub tokens) behave as before. Tested on macOS only.
+
+- **Two ideas recorded as ready, not adopted.** Nothing changes in the kit; each waits for a real case.
+  - [Continuous evals](docs/plays/test-continuous-evals.md#ready-not-adopted): judge what the agent's report means, with yes/no questions to a decision model such as TypeSafe's Jev, instead of matching strings in it.
+  - [Approval gates](docs/plays/deploy-approval-gates.md#ready-not-adopted): route deploys through one named entry point that the gate matches exactly. An optional model check could add a confirmation step but never allow a command. Constructed commands such as `kubectl apply -n prod` pass today's gate.
+- Projects pick up the hook fix when the plugin updates. Nothing in the template changed.
+
 ## 0.2.5 - 2026-09-26
 
 **The kit is for private repositories whose contributors are all trusted, and now says so up front.** It is not for public repositories or open-source projects that take contributions from people you do not know. The agents read pull requests, review comments and CI logs, and CI runs pull requests' code with the Anthropic key in reach. The guards added in 0.2.2 to 0.2.4 stay: the fix loop refuses forks and outside authors, and no agent job holds a token that can write to GitHub. They limit the damage of a mistake; they are not what makes the kit safe for untrusted contributors, and they were never going to be. Decided by the owner after the 0.2.4 review showed how many of the remaining risks start with an outside contributor.
