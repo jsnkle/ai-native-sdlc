@@ -54,8 +54,7 @@ From the end-to-end run of 0.2.3 on the sandbox (all observed; details in [docs/
 - **When the fix loop's publish job stops, it says so on the PR** with a link to the run. A refused push (for example, a commit touching `.github/`) showed only as a failed run, and whoever asked saw nothing.
 - **The fix loop's summary is written as it reads after the push.** It said its commit was "not pushed", because the agent writes it before the publish job pushes.
 - **Build triage posts only the three-line summary.** It posted the cause, the flaky-or-real call and then the summary as three sections.
-- **What remains:**
-  - The `claude-mention` and `triage-failed-build` changes above have not run on GitHub. Those workflows run on comment and pull request events, which use the default branch's copy, so they could not be dispatched from a test branch. closing-the-loop 0.2.4 did run on the sandbox from a branch and opened its proposal PR.
+- **First run on GitHub, 2026-09-27.** The `claude-mention` and `triage-failed-build` changes above could not be dispatched from a test branch, because those workflows run on comment and pull request events, which use the default branch's copy. They ran on the sandbox's main the day after release and behaved as described: the token check passed, the summary read as it does after the push, a refused push put a notice on the PR, and triage posted three lines. Details in [docs/e2e-2026-09-26.md](docs/e2e-2026-09-26.md#the-fix-loop-and-triage-024-2026-09-27).
 - **Projects that copied the template earlier should replace `closing-the-loop.yml`, `spec-on-intent-merge.yml`, `claude-mention.yml`, `triage-failed-build.yml` and `ops/loop.sh`, and add `ops/propose.sh`.**
 
 ## 0.2.3 - 2026-09-25
