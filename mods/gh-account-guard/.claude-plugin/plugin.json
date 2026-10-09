@@ -1,0 +1,23 @@
+{
+  "name": "gh-account-guard",
+  "version": "0.1.0",
+  "description": "Asks before a gh or git push call runs on a GitHub account other than the one the repo's owner needs, and offers to switch.",
+  "author": {
+    "name": "jsnkle"
+  },
+  "license": "MIT",
+  "userConfig": {
+    "rules": {
+      "type": "string",
+      "title": "Account rules",
+      "description": "Which account each repo owner needs: account=owner,owner; account=owner. Owners are GitHub users or orgs, matched without case.",
+      "default": ""
+    },
+    "tokenOwners": {
+      "type": "string",
+      "title": "Token owners",
+      "description": "Owners a GH_TOKEN or GITHUB_TOKEN in the environment may reach, comma-separated. A token call to any other owner is held.",
+      "default": ""
+    }
+  }
+}
