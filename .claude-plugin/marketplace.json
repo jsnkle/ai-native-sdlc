@@ -4,8 +4,7 @@
     "name": "jsnkle"
   },
   "metadata": {
-    "description": "Plugins for running an AI-native software development lifecycle with Claude Code",
-    "pluginRoot": "./plugin"
+    "description": "Plugins for running an AI-native software development lifecycle with Claude Code"
   },
   "plugins": [
     {
@@ -17,8 +16,61 @@
         "name": "jsnkle"
       },
       "license": "MIT",
-      "keywords": ["sdlc", "intent", "spec", "plan", "review", "hooks", "governance"],
+      "keywords": [
+        "sdlc",
+        "intent",
+        "spec",
+        "plan",
+        "review",
+        "hooks",
+        "governance"
+      ],
       "category": "workflow"
+    },
+    {
+      "name": "gh-account-guard",
+      "source": "./mods/gh-account-guard",
+      "description": "Holds gh and git push calls whose repo owner needs a different GitHub account than the one the call would use, and offers to switch first.",
+      "version": "0.1.0",
+      "author": {
+        "name": "jsnkle"
+      },
+      "license": "MIT",
+      "keywords": [
+        "mod",
+        "terminal"
+      ],
+      "category": "workflow"
+    },
+    {
+      "name": "codex-job-board",
+      "source": "./mods/codex-job-board",
+      "description": "Tracks OpenAI Codex CLI runs started from Bash: /codex pane and status-line entry with session id, elapsed time, status and token usage.",
+      "version": "0.1.0",
+      "author": {
+        "name": "jsnkle"
+      },
+      "license": "MIT",
+      "keywords": [
+        "mod",
+        "terminal"
+      ],
+      "category": "productivity"
+    },
+    {
+      "name": "tasks-band",
+      "source": "./mods/tasks-band",
+      "description": "Draws done/total from the project TASKS.md and the next open item in a band above the prompt.",
+      "version": "0.1.0",
+      "author": {
+        "name": "jsnkle"
+      },
+      "license": "MIT",
+      "keywords": [
+        "mod",
+        "terminal"
+      ],
+      "category": "productivity"
     }
   ]
 }

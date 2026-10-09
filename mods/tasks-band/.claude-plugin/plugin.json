@@ -1,0 +1,18 @@
+{
+  "name": "tasks-band",
+  "version": "0.1.0",
+  "description": "A thin band above the prompt that shows TASKS.md progress and the next unchecked item.",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "file": {
+      "type": "string",
+      "title": "Task file",
+      "description": "Checklist file to read, relative to the session's working directory.",
+      "default": "TASKS.md"
+    }
+  },
+  "author": {
+    "name": "jsnkle"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "codex-job-board",
+  "version": "0.1.0",
+  "description": "A job board for Codex CLI runs started from Bash: a status-line count while any run is going, and a /codex pane with each run's session id, model, time, status, tokens, context fill and report path.",
+  "author": {
+    "name": "jsnkle"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

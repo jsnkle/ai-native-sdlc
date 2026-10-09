@@ -60,6 +60,28 @@ brownfield/        The runbook for adopting the process in an existing repositor
 org/               What lives outside any repo: managed settings, permission policy,
                    and how to host this repo as a private plugin marketplace.
 scripts/           new-project.sh, the greenfield bootstrap.
+mods/              Claude Code mods, one folder per mod, each its own plugin in this
+                   marketplace: gh-account-guard, codex-job-board, tasks-band. See
+                   "Mods" below.
+```
+
+## Mods
+
+Mods are plugins with a hooks module that can change what Claude Code does and draw their
+own UI in the terminal. They are independent of the SDLC plugin and of each other, and
+need Claude Code 2.1.287 or later. Each folder has a README that explains what it does,
+what it does not catch, and how it was built.
+
+| Mod | What it does |
+| --- | --- |
+| [`mods/gh-account-guard/`](mods/gh-account-guard/) | Holds a `gh` or `git push` call whose repo needs a different GitHub account than the one the call would use, and offers to switch first. The account table lives in your settings, not here. |
+| [`mods/codex-job-board/`](mods/codex-job-board/) | Tracks OpenAI Codex CLI runs started from Bash: `/codex` opens a pane with each run's session id, elapsed time, status and token usage, read from Codex's own session files. |
+| [`mods/tasks-band/`](mods/tasks-band/) | Draws done/total from the project's `TASKS.md` and the next open item in a band above the prompt. |
+
+Install one at a time from a terminal session:
+
+```
+/plugin install gh-account-guard --marketplace jsnkle/ai-native-sdlc
 ```
 
 ## Installing the plugin

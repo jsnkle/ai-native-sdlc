@@ -3,6 +3,14 @@
 All notable changes to the plugin and template are recorded here. The plugin version in
 `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` moves together.
 
+## Mods - 2026-10-09
+
+**Three Claude Code mods under `mods/`, each its own plugin in the marketplace.** The SDLC plugin stays at 0.2.7 and is unchanged. `marketplace.json` lists the mods beside it; its `pluginRoot` is gone and the plugin's source is `./plugin` so the two roots can coexist.
+
+- **`gh-account-guard`** holds a `gh` or `git push` call when the repo owner needs a different GitHub account than the active keyring account (or an exported token), and asks: switch and run, run anyway, or cancel. Fails closed: when it cannot tell, it asks. The account table is a `pluginConfigs` setting, not source.
+- **`codex-job-board`** tracks `codex exec` runs started from Bash and shows session id, elapsed, status and context fill in a `/codex` pane and the status line, read from `~/.codex/sessions`.
+- **`tasks-band`** draws done/total from `TASKS.md` and the next open item above the prompt.
+
 ## 0.2.7 - 2026-09-26
 
 **The guardrail hooks fail closed: an edit they cannot read is blocked, not allowed.** Each hook reads the edit with `jq`. When `jq` was missing, or the payload had no file path or new text where the hook looked, the hook found nothing to check and let the edit through without a word. Now it blocks the edit and says why. On a machine without `jq` that blocks every edit until `jq` is installed; that is the trade-off, a guardrail that is off says so. A missing `jq` has not been seen in a real session: the Mac this was built on has it at `/usr/bin/jq`, and GitHub's runners have it. The same silent pass has been seen twice from other causes: the `/dev/stdin` bug found in 0.2.0, and a Codex-shaped edit fed to `protect-tests.sh` on 2026-09-25.
